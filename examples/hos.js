@@ -7,6 +7,29 @@
 	var currentSectionIndex =
 		params && params.get("loc") ? params.get("loc") : undefined;
 
+	// ---- 自動儲存 CFI 同 Resume ----
+	var STORAGE_KEY = "epub-cfi-" + (url || "./ex.epub");
+	// URL 嘅 loc param 優先過 localStorage 嘅 saved CFI
+	var savedCfi = !currentSectionIndex ? localStorage.getItem(STORAGE_KEY) : null;
+	var startCfi = currentSectionIndex || savedCfi || undefined;
+
+	var _saveTimeout = null;
+	function _saveCurrentCfi() {
+		try {
+			var loc = rendition.currentLocation();
+			if (loc && loc.start && loc.start.cfi) {
+				localStorage.setItem(STORAGE_KEY, loc.start.cfi);
+			}
+		} catch (e) {
+			// ignore quota / private-browsing errors
+		}
+	}
+	function _debouncedSaveCfi() {
+		if (_saveTimeout) clearTimeout(_saveTimeout);
+		_saveTimeout = setTimeout(_saveCurrentCfi, 500);
+	}
+	// ---- End ----
+
 	// Load the opf
 	var book = ePub(url || "./ex.epub");
 	var rendition = book.renderTo("viewer", {
@@ -14,11 +37,20 @@
 		height: "100%",
 		spread: "none",
 		layout: "reflowable",
-		manager: "continuous",
+		manager: "default",
 		flow: "paginated",
 	});
 
-	rendition.display(currentSectionIndex);
+	// 等 locations generate 完先 display，確保 saved CFI resume 準確
+	book.ready.then(function () {
+		return book.locations.generate(1000);
+	}).then(function () {
+		if (startCfi) {
+			rendition.display(startCfi);
+		} else {
+			rendition.display();
+		}
+	});
 
 	book.ready.then(function () {
 		var next = document.getElementById("next");
@@ -87,6 +119,9 @@
 	});
 
 	rendition.on("relocated", function (location) {
+		// 每次換頁自動儲存 CFI（debounce 500ms 避免頻繁寫入）
+		_debouncedSaveCfi();
+
 		// eslint-disable-next-line no-console
 		console.log(location);
 
@@ -120,6 +155,11 @@
 		} else {
 			viewer.classList.add("single");
 		}
+	});
+
+	window.addEventListener("beforeunload", function () {
+		// 離開頁面前最後一次 save CFI（唔 debounce，直接寫）
+		_saveCurrentCfi();
 	});
 
 	window.addEventListener("unload", function () {
