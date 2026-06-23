@@ -61,6 +61,7 @@
     "localforage": "^1.10.0",
     "lodash": "^4.17.21",
     "marks-pane": "^1.0.9",
-    "path-webpack": "0.0.3"
+    "path-webpack": "0.0.3",
+    "prettier": "^3.8.4"
   }
 }

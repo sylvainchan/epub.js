@@ -27,7 +27,9 @@
     <!-- ================================================================= -->
     <!-- EPUB 內容顯示區域 -->
     <!-- ================================================================= -->
-    <div id="viewer" class="spreads has-bottom-bar"></div>
+    <div id="reader" class="reader">
+      <div id="viewer" class="spreads has-bottom-bar"></div>
+    </div>
 
     <!-- ================================================================= -->
     <!-- 底部控制列（簡潔版） -->
@@ -193,21 +195,51 @@
           <div class="settings-section">
             <div class="settings-section-label">📏 字型大小</div>
             <div class="stepper-row">
-              <button class="stepper-btn" id="font-size-down" title="縮小字型" aria-label="縮小字型">A⁻</button>
+              <button
+                class="stepper-btn"
+                id="font-size-down"
+                title="縮小字型"
+                aria-label="縮小字型"
+              >
+                A⁻
+              </button>
               <span class="stepper-value" id="font-size-label">100%</span>
-              <button class="stepper-btn" id="font-size-up" title="放大字型" aria-label="放大字型">A⁺</button>
+              <button
+                class="stepper-btn"
+                id="font-size-up"
+                title="放大字型"
+                aria-label="放大字型"
+              >
+                A⁺
+              </button>
             </div>
-            <button class="action-btn" id="font-size-reset" style="margin-top:6px;width:100%;">↩ 書本預設</button>
+            <button
+              class="action-btn"
+              id="font-size-reset"
+              style="margin-top: 6px; width: 100%"
+            >
+              ↩ 書本預設
+            </button>
           </div>
 
           <!-- ---- 行距 ---- -->
           <div class="settings-section">
             <div class="settings-section-label">📏 行距</div>
             <div class="option-chips" id="line-height-chips">
-              <button class="option-chip line-height-chip active" data-index="-1">書本預設</button>
-              <button class="option-chip line-height-chip" data-index="0">窄</button>
-              <button class="option-chip line-height-chip" data-index="1">標準</button>
-              <button class="option-chip line-height-chip" data-index="2">闊</button>
+              <button
+                class="option-chip line-height-chip active"
+                data-index="-1"
+              >
+                書本預設
+              </button>
+              <button class="option-chip line-height-chip" data-index="0">
+                窄
+              </button>
+              <button class="option-chip line-height-chip" data-index="1">
+                標準
+              </button>
+              <button class="option-chip line-height-chip" data-index="2">
+                闊
               </button>
             </div>
           </div>
@@ -216,9 +248,13 @@
           <div class="settings-section">
             <div class="settings-section-label">📏 邊距</div>
             <div class="option-chips" id="margin-chips">
-              <button class="option-chip margin-chip active" data-index="-1">書本預設</button>
+              <button class="option-chip margin-chip active" data-index="-1">
+                書本預設
+              </button>
               <button class="option-chip margin-chip" data-index="0">窄</button>
-              <button class="option-chip margin-chip" data-index="1">標準</button>
+              <button class="option-chip margin-chip" data-index="1">
+                標準
+              </button>
               <button class="option-chip margin-chip" data-index="2">闊</button>
             </div>
           </div>
@@ -227,11 +263,21 @@
           <div class="settings-section">
             <div class="settings-section-label">📐 文字對齊</div>
             <div class="option-chips">
-              <button class="option-chip align-chip active" data-index="-1">書本預設</button>
-              <button class="option-chip align-chip" data-index="0">靠左</button>
-              <button class="option-chip align-chip" data-index="1">置中</button>
-              <button class="option-chip align-chip" data-index="2">靠右</button>
-              <button class="option-chip align-chip" data-index="3">左右對齊</button>
+              <button class="option-chip align-chip active" data-index="-1">
+                書本預設
+              </button>
+              <button class="option-chip align-chip" data-index="0">
+                靠左
+              </button>
+              <button class="option-chip align-chip" data-index="1">
+                置中
+              </button>
+              <button class="option-chip align-chip" data-index="2">
+                靠右
+              </button>
+              <button class="option-chip align-chip" data-index="3">
+                左右對齊
+              </button>
             </div>
           </div>
 
@@ -239,7 +285,9 @@
           <div class="settings-section">
             <div class="settings-section-label">📏 段落間距</div>
             <div class="option-chips">
-              <button class="option-chip para-chip active" data-index="-1">書本預設</button>
+              <button class="option-chip para-chip active" data-index="-1">
+                書本預設
+              </button>
               <button class="option-chip para-chip" data-index="0">窄</button>
               <button class="option-chip para-chip" data-index="1">標準</button>
               <button class="option-chip para-chip" data-index="2">闊</button>
@@ -269,20 +317,22 @@
           <div class="settings-section">
             <div class="settings-section-label">🔤 繁簡轉換</div>
             <div class="option-chips">
-              <button class="option-chip scst-chip active" data-index="-1">書本預設</button>
-              <button class="option-chip scst-chip" data-index="0">简→繁</button>
-              <button class="option-chip scst-chip" data-index="1">繁→简</button>
+              <button class="option-chip scst-chip active" data-index="-1">
+                書本預設
+              </button>
+              <button class="option-chip scst-chip" data-index="0">
+                简→繁
+              </button>
+              <button class="option-chip scst-chip" data-index="1">
+                繁→简
+              </button>
             </div>
           </div>
 
           <!-- ---- 進階 ---- -->
           <div class="settings-section">
             <div class="settings-section-label">🔧 進階</div>
-            <button
-              class="action-btn"
-              id="grid-config"
-              title="九宮格動作設定"
-            >
+            <button class="action-btn" id="grid-config" title="九宮格動作設定">
               ⊞ 九宮格設定
             </button>
           </div>
