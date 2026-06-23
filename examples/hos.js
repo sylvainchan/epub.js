@@ -30,6 +30,68 @@
 	}
 	// ---- End ----
 
+	// ---- 窄螢幕偵測 ----
+	var NARROW_BREAKPOINT = 768;
+	function _isNarrowScreen() {
+		return window.innerWidth <= NARROW_BREAKPOINT;
+	}
+
+	// Touch swipe 手勢（窄螢幕用）
+	var _touchStartX = 0;
+	var _touchStartY = 0;
+	var _swipeThreshold = 50; // 最少滑動距離先當 swipe
+
+	function _onTouchStart(e) {
+		if (!_isNarrowScreen()) return;
+		var t = e.touches[0];
+		_touchStartX = t.clientX;
+		_touchStartY = t.clientY;
+	}
+
+	function _onTouchEnd(e) {
+		if (!_isNarrowScreen()) return;
+		var t = e.changedTouches[0];
+		var dx = t.clientX - _touchStartX;
+		var dy = t.clientY - _touchStartY;
+
+		// 垂直滑動太大就唔當 swipe（容許 scroll）
+		if (Math.abs(dy) > Math.abs(dx)) return;
+		if (Math.abs(dx) < _swipeThreshold) return;
+
+		var isRtl = book.package.metadata.direction === "rtl";
+		if (dx > 0) {
+			// 向右滑 → 上一頁
+			isRtl ? rendition.next() : rendition.prev();
+		} else {
+			// 向左滑 → 下一頁
+			isRtl ? rendition.prev() : rendition.next();
+		}
+	}
+
+	function _updateArrowVisibility() {
+		var prev = document.getElementById("prev");
+		var next = document.getElementById("next");
+		if (_isNarrowScreen()) {
+			// 窄螢幕：隱藏箭嘴，靠 swipe 翻頁
+			prev.style.display = "none";
+			next.style.display = "none";
+		} else {
+			prev.style.display = "";
+			next.style.display = "";
+		}
+	}
+
+	// Resize debounce
+	var _resizeTimeout = null;
+	function _onResize() {
+		if (_resizeTimeout) clearTimeout(_resizeTimeout);
+		_resizeTimeout = setTimeout(function () {
+			_updateArrowVisibility();
+			rendition.resize();
+		}, 200);
+	}
+	// ---- End 窄螢幕 ----
+
 	// Load the opf
 	var book = ePub(url || "./ex.epub");
 	var rendition = book.renderTo("viewer", {
@@ -96,6 +158,16 @@
 
 		rendition.on("keyup", keyListener);
 		document.addEventListener("keyup", keyListener, false);
+
+		// ---- 窄螢幕 touch swipe + resize ----
+		var viewerEl = document.getElementById("viewer");
+		viewerEl.addEventListener("touchstart", _onTouchStart, { passive: true });
+		viewerEl.addEventListener("touchend", _onTouchEnd, { passive: true });
+		window.addEventListener("resize", _onResize);
+
+		// 初始檢查箭嘴顯示狀態
+		_updateArrowVisibility();
+		// ---- End ----
 	});
 
 	rendition.on("rendered", function (section) {
@@ -134,16 +206,19 @@
 				? document.getElementById("next")
 				: document.getElementById("prev");
 
-		if (location.atEnd) {
-			next.style.visibility = "hidden";
-		} else {
-			next.style.visibility = "visible";
-		}
+		// 窄螢幕模式下箭嘴已隱藏，唔需要改 visibility
+		if (!_isNarrowScreen()) {
+			if (location.atEnd) {
+				next.style.visibility = "hidden";
+			} else {
+				next.style.visibility = "visible";
+			}
 
-		if (location.atStart) {
-			prev.style.visibility = "hidden";
-		} else {
-			prev.style.visibility = "visible";
+			if (location.atStart) {
+				prev.style.visibility = "hidden";
+			} else {
+				prev.style.visibility = "visible";
+			}
 		}
 	});
 
