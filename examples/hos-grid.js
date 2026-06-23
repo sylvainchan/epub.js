@@ -1,5 +1,6 @@
 /* eslint-disable */
-// hos-grid.js — 九宮格 Tap Zone：3x3 grid overlay、可設定單元格動作、localStorage 持久化
+// hos-grid.js — 九宮格 Tap Zone：coordinate-based hit-test（無 DOM overlay）
+// Swipe gesture 不受影響、highlight 共存
 (function () {
   // =====================================================================
   // 可用動作定義
@@ -13,11 +14,10 @@
     none:    { id: "none",    label: "無（穿透）", icon: "—" },
   };
 
-  // =====================================================================
+  // Highlight CSS class 列表（同 hos-highlights.js 同步）
+  var HL_CLASSES = ["hl-yellow", "hl-green", "hl-cyan", "hl-pink", "hl-orange"];
+
   // 預設網格配置（3x3 = 9 格，row-major）
-  //   [0] prev     [1] settings  [2] next
-  //   [3] prev     [4] none      [5] next
-  //   [6] prev     [7] gridCfg   [8] next
   var DEFAULT_GRID = [
     "prev", "settings", "next",
     "prev", "none",     "next",
@@ -100,7 +100,6 @@
         "text-align:center;cursor:pointer;-webkit-appearance:none;-moz-appearance:none;" +
         "appearance:none;padding:0;";
 
-      // 填充動作選項
       var actionKeys = Object.keys(ACTIONS);
       for (var k = 0; k < actionKeys.length; k++) {
         var act = ACTIONS[actionKeys[k]];
@@ -157,14 +156,11 @@
     overlay.appendChild(panel);
     document.body.appendChild(overlay);
 
-    // ---- Public API ----
     function show(currentConfig) {
-      // 設定目前值
       for (var i = 0; i < 9; i++) {
         cellSelects[i].value = currentConfig[i];
       }
       overlay.style.display = "flex";
-
       saveBtn.onclick = function () {
         var newConfig = [];
         for (var j = 0; j < 9; j++) {
@@ -183,29 +179,28 @@
   }
 
   // =====================================================================
-  // Grid Overlay（3x3 透明 tap zone）
+  // Coordinate-based hit-test
   // =====================================================================
-  function _createGridOverlay(readerEl) {
-    var container = document.createElement("div");
-    container.id = "hos-grid";
-    container.style.cssText =
-      "position:fixed;top:0;left:0;width:100%;height:100%;z-index:15;" +
-      "display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr 1fr;" +
-      "pointer-events:none;" +
-      "padding:8px 8px 48px 8px;box-sizing:border-box;";
+  function _getCellIndex(clientX, clientY) {
+    var w = window.innerWidth;
+    var h = window.innerHeight;
+    // 底部留 48px 畀 settings bar
+    var usableH = h - 48;
+    var col = Math.floor(clientX / (w / 3));
+    var row = Math.floor(clientY / (usableH / 3));
+    if (col < 0) col = 0;
+    if (col > 2) col = 2;
+    if (row < 0) row = 0;
+    if (row > 2) row = 2;
+    return row * 3 + col;
+  }
 
-    var cells = [];
-    for (var i = 0; i < 9; i++) {
-      var cell = document.createElement("div");
-      cell.setAttribute("data-grid-cell", String(i));
-      cell.style.cssText =
-        "pointer-events:auto;position:relative;";
-      container.appendChild(cell);
-      cells.push(cell);
+  function _isHighlightTarget(target) {
+    if (!target || !target.classList) return false;
+    for (var i = 0; i < HL_CLASSES.length; i++) {
+      if (target.classList.contains(HL_CLASSES[i])) return true;
     }
-
-    document.body.appendChild(container);
-    return { container: container, cells: cells };
+    return false;
   }
 
   // =====================================================================
@@ -224,32 +219,34 @@
     var store = _createGridStore(STORAGE_KEY);
     var config = store.load();
 
-    var viewerEl = document.getElementById("viewer");
-    var grid = _createGridOverlay(viewerEl);
-
-    var _gridVisible = true;
-
     // ---- Config Panel ----
     function _onConfigSave(newConfig) {
       config = newConfig;
       store.save(config);
-      _applyCellPointers();
     }
 
     var configPanel = _createConfigPanel(_onConfigSave);
 
-    // ---- 根據 config 設定每個 cell 嘅 pointer-events ----
-    function _applyCellPointers() {
-      for (var i = 0; i < 9; i++) {
-        if (config[i] === "none") {
-          grid.cells[i].style.pointerEvents = "none";
-        } else {
-          grid.cells[i].style.pointerEvents = "auto";
-        }
+    // ---- 動作執行 ----
+    function _isRtl() {
+      return book && book.package && book.package.metadata &&
+        book.package.metadata.direction === "rtl";
+    }
+
+    function _toggleToc() {
+      var toc = document.getElementById("toc");
+      if (toc) {
+        toc.style.display = toc.style.display === "none" ? "" : "none";
       }
     }
 
-    // ---- 執行指定動作 ----
+    function _toggleSettings() {
+      var bar = document.getElementById("settings-bar");
+      if (bar) {
+        bar.style.display = bar.style.display === "none" ? "" : "none";
+      }
+    }
+
     function _executeAction(actionId) {
       switch (actionId) {
         case "prev":
@@ -272,54 +269,45 @@
       }
     }
 
-    function _isRtl() {
-      return book && book.package && book.package.metadata &&
-        book.package.metadata.direction === "rtl";
-    }
+    // ---- 注入 click handler 到每個 content iframe document ----
+    rendition.hooks.content.register(function (contents) {
+      var doc = contents.document;
+      if (!doc) return;
 
-    function _toggleToc() {
-      var toc = document.getElementById("toc");
-      if (toc) {
-        toc.style.display = toc.style.display === "none" ? "" : "none";
-      }
-    }
+      doc.addEventListener("click", function (e) {
+        // 唔干擾 highlight 點擊（click on highlight → show note）
+        if (_isHighlightTarget(e.target)) return;
 
-    function _toggleSettings() {
-      var bar = document.getElementById("settings-bar");
-      if (bar) {
-        bar.style.display = bar.style.display === "none" ? "" : "none";
-      }
-    }
+        // 如果有文字選取 → skip grid action（畀 highlight popup 處理）
+        var win = contents.window || (contents.document && contents.document.defaultView);
+        var sel = win ? win.getSelection() : null;
+        if (sel && !sel.isCollapsed && sel.toString().trim()) return;
 
-    // ---- Bind cell click ----
-    function _onCellClick(index) {
-      return function (e) {
-        e.stopPropagation();
-        e.preventDefault();
+        // 計算 iframe 內 click 嘅絕對坐標
+        var iframe = win ? win.frameElement : null;
+        var iframeRect = iframe ? iframe.getBoundingClientRect() : { left: 0, top: 0 };
+        var absX = iframeRect.left + e.clientX;
+        var absY = iframeRect.top + e.clientY;
+
+        var index = _getCellIndex(absX, absY);
         var actionId = config[index];
+
         if (actionId && actionId !== "none") {
+          e.stopPropagation();
+          e.preventDefault();
           _executeAction(actionId);
         }
-      };
-    }
+        // actionId === "none" → event passes through（text selection, links 等）
+      }, true);
+    });
 
-    for (var i = 0; i < 9; i++) {
-      // 只用 click event（desktop + mobile 通用）
-      // mobile 依靠 touch-action: manipulation 消除 300ms 延遲
-      grid.cells[i].addEventListener("click", _onCellClick(i));
-    }
-
-    // ---- 初始化 ----
-    _applyCellPointers();
-
-    // 暴露 API
+    // ---- 暴露 API ----
     window.hosReader.grid = {
       showConfig: function () { configPanel.show(config); },
       setCell: function (index, actionId) {
         if (index >= 0 && index < 9 && ACTIONS[actionId]) {
           config[index] = actionId;
           store.save(config);
-          _applyCellPointers();
         }
       },
       getConfig: function () { return config.slice(); },
