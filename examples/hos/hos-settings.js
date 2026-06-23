@@ -5,7 +5,15 @@
   // =====================================================================
   // 常數
   // =====================================================================
-  var THEME_NAMES = ["day", "night", "sepia", "green", "gray", "contrast", "dark-sepia"];
+  var THEME_NAMES = [
+    "day",
+    "night",
+    "sepia",
+    "green",
+    "gray",
+    "contrast",
+    "dark-sepia",
+  ];
   var THEME_CSS = {
     day: "body { background: #fff !important; } body, p, div, span, h1, h2, h3, h4, h5, h6 { color: #333 !important; }",
     night:
@@ -14,8 +22,7 @@
       "body { background: #f4ecd8 !important; } body, p, div, span, h1, h2, h3, h4, h5, h6 { color: #5b4636 !important; }",
     green:
       "body { background: #c8dcc8 !important; } body, p, div, span, h1, h2, h3, h4, h5, h6 { color: #2d3e2d !important; }",
-    gray:
-      "body { background: #e8e8e8 !important; } body, p, div, span, h1, h2, h3, h4, h5, h6 { color: #333 !important; }",
+    gray: "body { background: #e8e8e8 !important; } body, p, div, span, h1, h2, h3, h4, h5, h6 { color: #333 !important; }",
     contrast:
       "body { background: #000 !important; } body, p, div, span, h1, h2, h3, h4, h5, h6 { color: #fff !important; }",
     "dark-sepia":
@@ -294,7 +301,11 @@
       }
     }
 
-    return { updateChips: updateChips, setIndex: setIndex, bindEvents: bindEvents };
+    return {
+      updateChips: updateChips,
+      setIndex: setIndex,
+      bindEvents: bindEvents,
+    };
   }
 
   // =====================================================================
@@ -335,43 +346,29 @@
       }
     }
 
-    return { updateChips: updateChips, setIndex: setIndex, bindEvents: bindEvents };
+    return {
+      updateChips: updateChips,
+      setIndex: setIndex,
+      bindEvents: bindEvents,
+    };
   }
 
   // =====================================================================
-  // Column Mode Manager（改用 toggle switch）
+  // Column Mode Manager（hook 版：render 時 check setting 先 inject CSS）
   // =====================================================================
   function _createColumnManager(rendition, pref) {
     var isSingleColumn = pref.get("singleColumn", "true") !== "false";
-    var originalFormat = null;
+    // 單欄 ON 先 inject CSS 鎖死 1 欄
+    // 單欄 OFF → 唔 inject 任何嘢，由 contents.columns() 原生 CSS 控制多欄
+    var COLUMN_CSS = "body { column-count: 1 !important; }";
+    var CSS_ID = "single-column-override";
 
-    function apply(layout) {
-      if (!layout) {
-        layout = rendition.manager && rendition.manager.layout;
-      }
-      if (!layout) return;
-
-      if (!originalFormat) {
-        originalFormat = layout.format.bind(layout);
-      }
-
+    rendition.hooks.content.register(function (contents) {
       if (isSingleColumn) {
-        layout.format = function (contents, section, axis) {
-          if (this._flow === "paginated") {
-            return contents.columns(
-              this.width,
-              this.height,
-              99999,
-              0,
-              this.settings.direction,
-            );
-          }
-          return originalFormat(contents, section, axis);
-        };
-      } else {
-        layout.format = originalFormat;
+        contents.addStylesheetCss(COLUMN_CSS, CSS_ID);
       }
-    }
+      // OFF mode：唔 inject，contents.columns() 嘅 inline CSS 自然生效
+    });
 
     function updateToggle() {
       var cb = document.getElementById("column-toggle");
@@ -380,18 +377,15 @@
       }
     }
 
+    function _reloadPage() {
+      // beforeunload handler 喺 hos.js 會自動 save CFI → reload 後 resume
+      window.location.reload();
+    }
+
     function toggle() {
       isSingleColumn = !isSingleColumn;
       pref.set("singleColumn", isSingleColumn ? "true" : "false");
-      apply();
-      updateToggle();
-
-      var loc = rendition.currentLocation();
-      if (loc && loc.start && loc.start.cfi) {
-        rendition.display(loc.start.cfi);
-      } else {
-        rendition.resize();
-      }
+      _reloadPage();
     }
 
     function bindEvents() {
@@ -401,20 +395,12 @@
         cb.addEventListener("change", function () {
           isSingleColumn = cb.checked;
           pref.set("singleColumn", isSingleColumn ? "true" : "false");
-          apply();
-
-          var loc = rendition.currentLocation();
-          if (loc && loc.start && loc.start.cfi) {
-            rendition.display(loc.start.cfi);
-          } else {
-            rendition.resize();
-          }
+          _reloadPage();
         });
       }
     }
 
     return {
-      apply: apply,
       updateToggle: updateToggle,
       toggle: toggle,
       bindEvents: bindEvents,
@@ -547,8 +533,12 @@
     var bottomBar = document.getElementById("bottom-bar");
 
     function _isRtl() {
-      return book && book.package && book.package.metadata &&
-        book.package.metadata.direction === "rtl";
+      return (
+        book &&
+        book.package &&
+        book.package.metadata &&
+        book.package.metadata.direction === "rtl"
+      );
     }
 
     function updatePageInfo() {
@@ -654,7 +644,6 @@
 
     // --- Column Mode ---
     var columnManager = _createColumnManager(rendition, pref);
-    columnManager.apply();
     columnManager.updateToggle();
     columnManager.bindEvents();
 
