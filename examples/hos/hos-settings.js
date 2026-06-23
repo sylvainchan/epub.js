@@ -33,7 +33,13 @@
   var FONT_SIZE_DEFAULT_INDEX = 2; // 100%
 
   var LINE_HEIGHTS = [1.4, 1.8, 2.2];
-  var MARGINS = [4, 12, 24]; // 只存 px 值，用時砌 padding
+  var MARGINS = [4, 12, 24];
+
+  // 文字對齊：left / center / right / justify
+  var TEXT_ALIGNS = ["left", "center", "right", "justify"];
+
+  // 段落間距：p margin-bottom
+  var PARA_SPACING = ["0.4em", "0.8em", "1.6em"]; // 只存 px 值，用時砌 padding
 
   var FONT_OVERRIDE_SELECTOR =
     "body, p, div, span, li, td, th, h1, h2, h3, h4, h5, h6, blockquote, pre";
@@ -330,6 +336,7 @@
     function bindEvents() {
       var down = document.getElementById("font-size-down");
       var up = document.getElementById("font-size-up");
+      var reset = document.getElementById("font-size-reset");
       if (down)
         down.addEventListener("click", function (e) {
           e.preventDefault();
@@ -340,6 +347,15 @@
           e.preventDefault();
           adjust(1);
         });
+      if (reset)
+        reset.addEventListener("click", function (e) {
+          e.preventDefault();
+          currentSize = 100;
+          store.set("fontSize", "100");
+          rendition.themes.fontSize("100%");
+          _updateLabel();
+          window.location.reload();
+        });
     }
 
     return { syncLabel: _updateLabel, bindEvents: bindEvents };
@@ -349,14 +365,19 @@
   // Line Height Manager
   // =====================================================================
   function _createLineHeightManager(rendition, store) {
-    var currentIndex = store.getInt("lineHeight", 1);
-    rendition.themes.override("line-height", LINE_HEIGHTS[currentIndex], true);
+    var currentIndex = store.getInt("lineHeight", -1);
+    if (currentIndex >= 0 && currentIndex < LINE_HEIGHTS.length) {
+      rendition.themes.override(
+        "line-height",
+        LINE_HEIGHTS[currentIndex],
+        true,
+      );
+    }
 
     var chip = _bindChipGroup(".line-height-chip", function (idx) {
-      if (idx < 0 || idx >= LINE_HEIGHTS.length) return;
-      currentIndex = idx;
+      if (idx !== -1 && (idx < 0 || idx >= LINE_HEIGHTS.length)) return;
       store.set("lineHeight", String(idx));
-      rendition.themes.override("line-height", LINE_HEIGHTS[idx], true);
+      window.location.reload();
     });
 
     chip.syncActive(currentIndex);
@@ -372,21 +393,89 @@
   // Margin Manager
   // =====================================================================
   function _createMarginManager(rendition, store) {
-    var currentIndex = store.getInt("margin", 1);
+    var currentIndex = store.getInt("margin", -1);
     var _apply = function (idx) {
-      rendition.themes.override(
-        "padding",
-        MARGINS[idx] + "px " + MARGINS[idx] * 2 + "px",
-        true,
-      );
+      if (idx >= 0 && idx < MARGINS.length) {
+        rendition.themes.override(
+          "padding",
+          MARGINS[idx] + "px " + MARGINS[idx] * 2 + "px",
+          true,
+        );
+      }
     };
     _apply(currentIndex);
 
     var chip = _bindChipGroup(".margin-chip", function (idx) {
-      if (idx < 0 || idx >= MARGINS.length) return;
-      currentIndex = idx;
+      if (idx !== -1 && (idx < 0 || idx >= MARGINS.length)) return;
       store.set("margin", String(idx));
-      _apply(idx);
+      window.location.reload();
+    });
+
+    chip.syncActive(currentIndex);
+
+    return {
+      syncActive: function () {
+        chip.syncActive(currentIndex);
+      },
+    };
+  }
+
+  // =====================================================================
+  // Text Alignment Manager
+  // =====================================================================
+  function _createTextAlignManager(rendition, store) {
+    var currentIndex = store.getInt("textAlign", -1);
+    var CSS_ID = "text-align-override";
+    var TEXT_SELECTOR =
+      "body, p, div, li, td, th, h1, h2, h3, h4, h5, h6, blockquote";
+
+    var injector = _createCssInjector(rendition, CSS_ID, function () {
+      if (currentIndex < 0 || currentIndex >= TEXT_ALIGNS.length)
+        return "body {}";
+      return (
+        TEXT_SELECTOR +
+        " { text-align: " +
+        TEXT_ALIGNS[currentIndex] +
+        " !important; }"
+      );
+    });
+    injector.updateActive(true);
+
+    var chip = _bindChipGroup(".align-chip", function (idx) {
+      if (idx !== -1 && (idx < 0 || idx >= TEXT_ALIGNS.length)) return;
+      store.set("textAlign", String(idx));
+      window.location.reload();
+    });
+
+    chip.syncActive(currentIndex);
+
+    return {
+      syncActive: function () {
+        chip.syncActive(currentIndex);
+      },
+    };
+  }
+
+  // =====================================================================
+  // Paragraph Spacing Manager
+  // =====================================================================
+  function _createParaSpacingManager(rendition, store) {
+    var currentIndex = store.getInt("paraSpacing", -1);
+    var CSS_ID = "para-spacing-override";
+
+    var injector = _createCssInjector(rendition, CSS_ID, function () {
+      if (currentIndex < 0 || currentIndex >= PARA_SPACING.length)
+        return "body {}";
+      return (
+        "p { margin-bottom: " + PARA_SPACING[currentIndex] + " !important; }"
+      );
+    });
+    injector.updateActive(true);
+
+    var chip = _bindChipGroup(".para-chip", function (idx) {
+      if (idx !== -1 && (idx < 0 || idx >= PARA_SPACING.length)) return;
+      store.set("paraSpacing", String(idx));
+      window.location.reload();
     });
 
     chip.syncActive(currentIndex);
@@ -583,6 +672,12 @@
 
     // --- Margin ---
     _createMarginManager(rendition, store);
+
+    // --- Text Alignment ---
+    _createTextAlignManager(rendition, store);
+
+    // --- Paragraph Spacing ---
+    _createParaSpacingManager(rendition, store);
 
     // --- Column Mode ---
     _createColumnManager(rendition, store);

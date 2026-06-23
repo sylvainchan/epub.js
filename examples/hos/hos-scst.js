@@ -2003,33 +2003,20 @@
     var rendition = H.rendition;
     var PREF_KEY = H._makeStorageKey("scst");
 
-    _buildMaps();
-
-    // 讀取已儲存嘅 mode: "none" | "s2t" | "t2s"
+    // mode mapping: -1 → none, 0 → s2t, 1 → t2s
+    var MODES = ["s2t", "t2s"];
     var currentMode = localStorage.getItem(PREF_KEY) || "none";
+
+    _buildMaps();
 
     function setMode(mode) {
       if (mode !== "none" && mode !== "s2t" && mode !== "t2s") return;
       currentMode = mode;
       localStorage.setItem(PREF_KEY, mode);
 
-      // 將現有 content 全部轉換
       var list = rendition.getContents();
       for (var i = 0; i < list.length; i++) {
         _convertDocument(list[i].document, mode);
-      }
-
-      // 更新 UI 按鈕狀態
-      _updateButton();
-    }
-
-    function toggleMode() {
-      if (currentMode === "none") {
-        setMode("s2t");
-      } else if (currentMode === "s2t") {
-        setMode("t2s");
-      } else {
-        setMode("none");
       }
     }
 
@@ -2042,39 +2029,42 @@
       _convertDocument(contents.document, currentMode);
     });
 
-    // ---- UI 按鈕 ----
-    function _updateButton() {
-      var btn = document.getElementById("scst-toggle");
-      if (!btn) return;
-      if (currentMode === "s2t") {
-        btn.textContent = "简→繁";
-        btn.classList.add("active");
-      } else if (currentMode === "t2s") {
-        btn.textContent = "繁→简";
-        btn.classList.add("active");
-      } else {
-        btn.textContent = "繁简";
-        btn.classList.remove("active");
-      }
+    // ---- Chip UI ----
+    function _idxToMode(idx) {
+      if (idx === -1) return "none";
+      if (idx === 0 || idx === 1) return MODES[idx];
+      return "none";
     }
 
-    function bindButton() {
-      var btn = document.getElementById("scst-toggle");
-      if (!btn) return;
-      _updateButton();
-      btn.addEventListener("click", function (e) {
+    function _modeToIdx(mode) {
+      if (mode === "s2t") return 0;
+      if (mode === "t2s") return 1;
+      return -1;
+    }
+
+    var chips = document.querySelectorAll(".scst-chip");
+    for (var i = 0; i < chips.length; i++) {
+      chips[i].addEventListener("click", function (e) {
         e.preventDefault();
-        toggleMode();
+        var idx = parseInt(this.getAttribute("data-index"), 10);
+        if (isNaN(idx)) return;
+        localStorage.setItem(PREF_KEY, _idxToMode(idx));
+        window.location.reload();
       });
     }
 
-    // ---- 初始化 ----
-    bindButton();
+    // 初始 active
+    var activeIdx = _modeToIdx(currentMode);
+    for (var j = 0; j < chips.length; j++) {
+      chips[j].classList.toggle(
+        "active",
+        parseInt(chips[j].getAttribute("data-index"), 10) === activeIdx,
+      );
+    }
 
     // 暴露 API
     window.hosReader.scst = {
       setMode: setMode,
-      toggleMode: toggleMode,
       getMode: getMode,
     };
   };
