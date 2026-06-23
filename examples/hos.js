@@ -43,12 +43,11 @@
     flow: "paginated",
   });
 
-  // ---- 暴露畀其他 module ----
-  window.hosReader = {
-    book: book,
-    rendition: rendition,
-    url: url,
-  };
+  // ---- 暴露畀其他 module（merge 而唔係 overwrite）----
+  window.hosReader = window.hosReader || {};
+  window.hosReader.book = book;
+  window.hosReader.rendition = rendition;
+  window.hosReader.url = url;
 
   // ---- Display ----
   book.ready

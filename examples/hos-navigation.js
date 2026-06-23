@@ -1,10 +1,12 @@
 /* eslint-disable */
 // hos-navigation.js — 導航：Swipe / 窄螢幕偵測 / 箭嘴 / 鍵盤 / Resize
 (function () {
-  var H = window.hosReader;
-  if (!H) return;
+  // Always register — hos.js will merge later
+  window.hosReader = window.hosReader || {};
 
-  H._initNavigation = function () {
+  window.hosReader._initNavigation = function () {
+    var H = window.hosReader;
+    if (!H || !H.book) return;
     var book = H.book;
     var rendition = H.rendition;
 

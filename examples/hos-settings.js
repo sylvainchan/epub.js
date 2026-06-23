@@ -1,10 +1,12 @@
 /* eslint-disable */
 // hos-settings.js — 自訂面板：Theme / Font / Font Size / Line Height / Margin / 單多欄
 (function () {
-  var H = window.hosReader;
-  if (!H) return;
+  // Always register — hos.js will merge later
+  window.hosReader = window.hosReader || {};
 
-  H._initSettings = function () {
+  window.hosReader._initSettings = function () {
+    var H = window.hosReader;
+    if (!H || !H.book) return;
     var book = H.book;
     var rendition = H.rendition;
     var url = H.url;
@@ -261,9 +263,8 @@
       }
     }
 
-    rendition.on("attached", function () {
-      _applySingleColumn();
-    });
+    // 直接 apply（attached event 已經 fired，唔可以靠 listener）
+    _applySingleColumn();
 
     // ---- Event binding ----
     _updateThemeButtons();
