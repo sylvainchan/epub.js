@@ -68,24 +68,61 @@ body {
   margin: 10px auto;
 }
 
-#column-toggle {
-  display: block;
-  margin: 4px auto;
+/* ---- 自訂面板 ---- */
+#settings-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 6px auto;
+  padding: 4px 10px;
+  max-width: 900px;
+}
+
+.settings-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+#settings-bar button,
+#settings-bar select {
   font-size: 14px;
-  padding: 4px 14px;
+  padding: 4px 10px;
   border-radius: 6px;
   border: 1px solid rgba(0, 0, 0, 0.12);
   background: rgba(255, 255, 255, 0.9);
   cursor: pointer;
   white-space: nowrap;
+  min-width: 36px;
+  min-height: 32px;
 }
 
-#column-toggle:hover {
+#settings-bar select {
+  padding: 4px 6px;
+}
+
+#settings-bar button:hover,
+#settings-bar select:hover {
   background: rgba(0, 0, 0, 0.05);
 }
 
-#column-toggle:active {
+#settings-bar button:active {
   background: rgba(0, 0, 0, 0.1);
+}
+
+#settings-bar button.active {
+  background: rgba(0, 0, 0, 0.12);
+  border-color: rgba(0, 0, 0, 0.25);
+}
+
+#font-size-label {
+  display: inline-block;
+  min-width: 42px;
+  text-align: center;
+  font-size: 13px;
+  color: #666;
 }
 
 @media (min-width: 1000px) {
@@ -381,19 +418,43 @@ svg {
     display: none !important;
   }
 
-  #column-toggle {
+  /* 窄螢幕：settings bar 放底部，簡化 */
+  #settings-bar {
     position: fixed;
-    top: env(safe-area-inset-top, 8px);
-    right: 8px;
+    bottom: 0;
+    left: 0;
+    right: 0;
     z-index: 20;
-    font-size: 13px;
-    padding: 4px 10px;
-    border-radius: 6px;
-    border: 1px solid rgba(0, 0, 0, 0.1);
+    margin: 0;
+    padding: 6px 8px;
+    padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
+    gap: 4px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    justify-content: flex-start;
     background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    cursor: pointer;
-    white-space: nowrap;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    max-width: 100%;
+  }
+
+  #settings-bar button,
+  #settings-bar select {
+    font-size: 12px;
+    padding: 4px 8px;
+    min-width: 32px;
+    min-height: 28px;
+    background: transparent;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+  }
+
+  #font-size-label {
+    font-size: 11px;
+    min-width: 34px;
+  }
+
+  #font-select {
+    max-width: 80px;
   }
 }

@@ -14,7 +14,39 @@
   <body>
     <!-- <div id="title"></div> -->
     <select id="toc"></select>
-    <button id="column-toggle" title="切換單欄/多欄模式">📖 單欄</button>
+    <div id="settings-bar">
+      <span class="settings-group">
+        <button data-theme="day" title="日間模式">☀️</button>
+        <button data-theme="night" title="夜間模式">🌙</button>
+        <button data-theme="sepia" title="懷舊模式">📜</button>
+      </span>
+      <span class="settings-group">
+        <select id="font-select" title="字型">
+          <option value="">預設字型</option>
+          <option value="LXGW WenKai TC, LXGW WenKai, serif">霞鶩文楷</option>
+          <option value="Noto Serif CJK TC, Source Han Serif TC, serif">
+            思源宋體
+          </option>
+          <option value="Noto Sans CJK TC, Source Han Sans TC, sans-serif">
+            思源黑體
+          </option>
+        </select>
+      </span>
+      <span class="settings-group">
+        <button id="font-size-down" title="縮小字型">A⁻</button>
+        <span id="font-size-label">100%</span>
+        <button id="font-size-up" title="放大字型">A⁺</button>
+      </span>
+      <span class="settings-group">
+        <button id="line-height-btn" title="切換行高">↕️</button>
+      </span>
+      <span class="settings-group">
+        <button id="margin-btn" title="切換邊距">📐</button>
+      </span>
+      <span class="settings-group">
+        <button id="column-toggle" title="切換單欄/多欄模式">📖</button>
+      </span>
+    </div>
     <div id="viewer" class="spreads"></div>
     <a id="prev" href="#prev" class="arrow">‹</a>
     <a id="next" href="#next" class="arrow">›</a>
