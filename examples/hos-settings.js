@@ -1,45 +1,111 @@
 /* eslint-disable */
 // hos-settings.js — 自訂面板：Theme / Font / Font Size / Line Height / Margin / 單多欄
+// 重構版：提取 PreferencesStore、消除重複 pattern、var→let/const
 (function () {
-  // Always register — hos.js will merge later
-  window.hosReader = window.hosReader || {};
+  "use strict";
 
-  window.hosReader._initSettings = function () {
-    var H = window.hosReader;
-    if (!H || !H.book) return;
-    var book = H.book;
-    var rendition = H.rendition;
-    var url = H.url;
-    var PREF_PREFIX = "epub-pref-" + (url || "./ex.epub") + "-";
+  // =====================================================================
+  // 常數
+  // =====================================================================
+  var THEME_NAMES = ["day", "night", "sepia"];
+  var THEME_CSS = {
+    day: "body { background: #fff !important; } body, p, div, span, h1, h2, h3, h4, h5, h6 { color: #333 !important; }",
+    night:
+      "body { background: #1a1a1a !important; } body, p, div, span, h1, h2, h3, h4, h5, h6 { color: #ccc !important; }",
+    sepia:
+      "body { background: #f4ecd8 !important; } body, p, div, span, h1, h2, h3, h4, h5, h6 { color: #5b4636 !important; }",
+  };
 
-    // --- Theme（日間 / 夜間 / 懷舊）---
-    var THEME_CSS = {
-      day: "body { background: #fff !important; } body, p, div, span, h1, h2, h3, h4, h5, h6 { color: #333 !important; }",
-      night:
-        "body { background: #1a1a1a !important; } body, p, div, span, h1, h2, h3, h4, h5, h6 { color: #ccc !important; }",
-      sepia:
-        "body { background: #f4ecd8 !important; } body, p, div, span, h1, h2, h3, h4, h5, h6 { color: #5b4636 !important; }",
+  var FONT_SIZES = [80, 90, 100, 110, 120, 140, 160, 180, 200];
+  var FONT_SIZE_DEFAULT_INDEX = 2; // 100%
+
+  var LINE_HEIGHTS = [1.4, 1.8, 2.2];
+  var LINE_HEIGHT_LABELS = ["行高: 窄", "行高: 標準", "行高: 闊"];
+
+  var MARGINS = [
+    { padding: "0 8px" },
+    { padding: "0 24px" },
+    { padding: "0 48px" },
+  ];
+  var MARGIN_LABELS = ["邊距: 窄", "邊距: 標準", "邊距: 闊"];
+
+  var FONT_OVERRIDE_SELECTOR =
+    "body, p, div, span, li, td, th, h1, h2, h3, h4, h5, h6, blockquote, pre";
+
+  // =====================================================================
+  // PreferencesStore — 封裝 localStorage + prefix
+  // =====================================================================
+  function _createPreferencesStore(prefix) {
+    return {
+      get: function (key, fallback) {
+        var v = localStorage.getItem(prefix + key);
+        return v !== null ? v : fallback;
+      },
+      getInt: function (key, fallback) {
+        var raw = localStorage.getItem(prefix + key);
+        if (raw === null) return fallback;
+        var parsed = parseInt(raw, 10);
+        return isNaN(parsed) ? fallback : parsed;
+      },
+      set: function (key, value) {
+        localStorage.setItem(prefix + key, value);
+      },
     };
-    var THEME_NAMES = ["day", "night", "sepia"];
-    var _currentTheme = localStorage.getItem(PREF_PREFIX + "theme") || "day";
+  }
 
-    THEME_NAMES.forEach(function (name) {
-      rendition.themes.registerCss(name, THEME_CSS[name]);
-    });
-    rendition.themes.select(_currentTheme);
+  // =====================================================================
+  // DOM helpers
+  // =====================================================================
+  function _getElementById(id) {
+    return document.getElementById(id);
+  }
 
-    function _setTheme(name) {
-      _currentTheme = name;
-      localStorage.setItem(PREF_PREFIX + "theme", name);
-      rendition.themes.select(name);
-      _updateThemeButtons();
+  function _querySelectorAll(selector) {
+    return document.querySelectorAll(selector);
+  }
+
+  // =====================================================================
+  // Font face CSS builder
+  // =====================================================================
+  function _buildFontFaceCss() {
+    var baseUrl = window.location.href.replace(/\/[^/]*$/, "/");
+    var fonts = [
+      { family: "Chiron Hei HK", file: "ChironHeiHK-Regular.ttf" },
+      { family: "Chiron Sung HK", file: "ChironSungHK-Regular.ttf" },
+      { family: "LXGW WenKai TC", file: "LXGWWenKaiTC-Regular.ttf" },
+      { family: "Noto Serif HK", file: "NotoSerifHK-Regular.ttf" },
+    ];
+    var css = "";
+    for (var i = 0; i < fonts.length; i++) {
+      var f = fonts[i];
+      css +=
+        "@font-face { font-family: '" +
+        f.family +
+        "'; src: url('" +
+        baseUrl +
+        "fonts/" +
+        f.file +
+        "') format('truetype'); font-weight: normal; font-style: normal; }";
     }
+    return css;
+  }
 
-    function _updateThemeButtons() {
-      var btns = document.querySelectorAll("#settings-bar button[data-theme]");
-      for (var i = 0; i < btns.length; i++) {
-        var btn = btns[i];
-        if (btn.getAttribute("data-theme") === _currentTheme) {
+  // =====================================================================
+  // Theme Manager
+  // =====================================================================
+  function _createThemeManager(rendition, pref) {
+    // 註冊所有 theme CSS
+    for (var i = 0; i < THEME_NAMES.length; i++) {
+      rendition.themes.registerCss(THEME_NAMES[i], THEME_CSS[THEME_NAMES[i]]);
+    }
+    var currentTheme = pref.get("theme", "day");
+    rendition.themes.select(currentTheme);
+
+    function _updateButtons(activeTheme) {
+      var btns = _querySelectorAll("#settings-bar button[data-theme]");
+      for (var j = 0; j < btns.length; j++) {
+        var btn = btns[j];
+        if (btn.getAttribute("data-theme") === activeTheme) {
           btn.classList.add("active");
         } else {
           btn.classList.remove("active");
@@ -47,176 +113,242 @@
       }
     }
 
-    // --- Font Family ---
-    var _currentFont = localStorage.getItem(PREF_PREFIX + "font") || "";
-    var _fontBaseUrl = window.location.href.replace(/\/[^/]*$/, "/");
+    function setTheme(name) {
+      currentTheme = name;
+      pref.set("theme", name);
+      rendition.themes.select(name);
+      _updateButtons(name);
+    }
 
-    var _customFontFaceCss =
-      "@font-face { font-family: 'Chiron Hei HK'; src: url('" +
-      _fontBaseUrl +
-      "fonts/ChironHeiHK-Regular.ttf') format('truetype'); font-weight: normal; font-style: normal; }" +
-      "@font-face { font-family: 'Chiron Sung HK'; src: url('" +
-      _fontBaseUrl +
-      "fonts/ChironSungHK-Regular.ttf') format('truetype'); font-weight: normal; font-style: normal; }" +
-      "@font-face { font-family: 'LXGW WenKai TC'; src: url('" +
-      _fontBaseUrl +
-      "fonts/LXGWWenKaiTC-Regular.ttf') format('truetype'); font-weight: normal; font-style: normal; }" +
-      "@font-face { font-family: 'Noto Serif HK'; src: url('" +
-      _fontBaseUrl +
-      "fonts/NotoSerifHK-Regular.ttf') format('truetype'); font-weight: normal; font-style: normal; }";
-
-    rendition.hooks.content.register(function (contents) {
-      if (_customFontFaceCss) {
-        contents.addStylesheetCss(_customFontFaceCss, "custom-font-face");
+    function bindEvents() {
+      var btns = _querySelectorAll("#settings-bar button[data-theme]");
+      for (var k = 0; k < btns.length; k++) {
+        btns[k].addEventListener("click", function (e) {
+          e.preventDefault();
+          var theme = this.getAttribute("data-theme");
+          if (theme) setTheme(theme);
+        });
       }
-      if (_currentFont) {
+    }
+
+    return {
+      setTheme: setTheme,
+      updateButtons: function () {
+        _updateButtons(currentTheme);
+      },
+      bindEvents: bindEvents,
+    };
+  }
+
+  // =====================================================================
+  // Font Family Manager
+  // =====================================================================
+  function _createFontManager(rendition, pref) {
+    var currentFont = pref.get("font", "");
+    var fontFaceCss = _buildFontFaceCss();
+
+    // 注入 font-face（hook 到每個 content）
+    rendition.hooks.content.register(function (contents) {
+      if (fontFaceCss) {
+        contents.addStylesheetCss(fontFaceCss, "custom-font-face");
+      }
+      if (currentFont) {
         contents.addStylesheetCss(
-          "body, p, div, span, li, td, th, h1, h2, h3, h4, h5, h6, blockquote, pre { " +
-            "font-family: " +
-            _currentFont +
+          FONT_OVERRIDE_SELECTOR +
+            " { font-family: " +
+            currentFont +
             " !important; }",
           "font-override",
         );
       }
     });
 
-    function _applyFont(family) {
-      if (family) {
-        var contents = rendition.getContents();
-        contents.forEach(function (c) {
-          c.addStylesheetCss(
-            "body, p, div, span, li, td, th, h1, h2, h3, h4, h5, h6, blockquote, pre { " +
-              "font-family: " +
+    function applyFont(family) {
+      var list = rendition.getContents();
+      for (var i = 0; i < list.length; i++) {
+        if (family) {
+          list[i].addStylesheetCss(
+            FONT_OVERRIDE_SELECTOR +
+              " { font-family: " +
               family +
               " !important; }",
             "font-override",
           );
-        });
-      } else {
-        var contents2 = rendition.getContents();
-        contents2.forEach(function (c) {
-          c.addStylesheetCss("", "font-override");
-        });
+        } else {
+          // 清空 font-override 以還原預設字型
+          list[i].addStylesheetCss("", "font-override");
+        }
       }
     }
 
-    function _setFont(family) {
-      _currentFont = family;
-      localStorage.setItem(PREF_PREFIX + "font", family);
-      _applyFont(family);
+    function setFont(family) {
+      currentFont = family;
+      pref.set("font", family);
+      applyFont(family);
     }
 
-    function _initFontSelect() {
-      var sel = document.getElementById("font-select");
+    function initSelect() {
+      var sel = _getElementById("font-select");
       if (sel) {
-        sel.value = _currentFont;
+        sel.value = currentFont;
       }
     }
 
-    // --- Font Size ---
-    var FONT_SIZES = [80, 90, 100, 110, 120, 140, 160, 180, 200];
-    var _currentFontSize = parseInt(
-      localStorage.getItem(PREF_PREFIX + "fontSize") || "100",
-      10,
-    );
-    rendition.themes.fontSize(_currentFontSize + "%");
+    function bindEvents() {
+      var sel = _getElementById("font-select");
+      if (sel) {
+        sel.addEventListener("change", function () {
+          setFont(this.value);
+        });
+      }
+    }
 
-    function _updateFontSizeLabel() {
-      var label = document.getElementById("font-size-label");
+    return {
+      getCurrentFont: function () {
+        return currentFont;
+      },
+      setFont: setFont,
+      applyFont: applyFont,
+      initSelect: initSelect,
+      bindEvents: bindEvents,
+    };
+  }
+
+  // =====================================================================
+  // Font Size Manager
+  // =====================================================================
+  function _createFontSizeManager(rendition, pref) {
+    var currentSize = pref.getInt("fontSize", 100);
+    rendition.themes.fontSize(currentSize + "%");
+
+    function updateLabel() {
+      var label = _getElementById("font-size-label");
       if (label) {
-        label.textContent = _currentFontSize + "%";
+        label.textContent = currentSize + "%";
       }
     }
 
-    function _adjustFontSize(delta) {
-      var idx = FONT_SIZES.indexOf(_currentFontSize);
-      if (idx === -1) idx = 2;
+    function adjust(delta) {
+      var idx = FONT_SIZES.indexOf(currentSize);
+      if (idx === -1) idx = FONT_SIZE_DEFAULT_INDEX;
       var newIdx = Math.max(0, Math.min(FONT_SIZES.length - 1, idx + delta));
       if (newIdx === idx) return;
-      _currentFontSize = FONT_SIZES[newIdx];
-      localStorage.setItem(PREF_PREFIX + "fontSize", _currentFontSize);
-      rendition.themes.fontSize(_currentFontSize + "%");
-      _updateFontSizeLabel();
+      currentSize = FONT_SIZES[newIdx];
+      pref.set("fontSize", String(currentSize));
+      rendition.themes.fontSize(currentSize + "%");
+      updateLabel();
     }
 
-    // --- Line Height ---
-    var LINE_HEIGHTS = [1.4, 1.8, 2.2];
-    var LINE_HEIGHT_LABELS = ["行高: 窄", "行高: 標準", "行高: 闊"];
-    var _currentLineHeight = parseInt(
-      localStorage.getItem(PREF_PREFIX + "lineHeight") || "1",
-      10,
-    );
-    rendition.themes.override(
-      "line-height",
-      LINE_HEIGHTS[_currentLineHeight],
-      true,
-    );
+    function bindEvents() {
+      var downBtn = _getElementById("font-size-down");
+      var upBtn = _getElementById("font-size-up");
+      if (downBtn) {
+        downBtn.addEventListener("click", function (e) {
+          e.preventDefault();
+          adjust(-1);
+        });
+      }
+      if (upBtn) {
+        upBtn.addEventListener("click", function (e) {
+          e.preventDefault();
+          adjust(1);
+        });
+      }
+    }
 
-    function _cycleLineHeight() {
-      _currentLineHeight = (_currentLineHeight + 1) % LINE_HEIGHTS.length;
-      localStorage.setItem(PREF_PREFIX + "lineHeight", _currentLineHeight);
+    return { updateLabel: updateLabel, adjust: adjust, bindEvents: bindEvents };
+  }
+
+  // =====================================================================
+  // Line Height Manager
+  // =====================================================================
+  function _createLineHeightManager(rendition, pref) {
+    var currentIndex = pref.getInt("lineHeight", 1);
+    rendition.themes.override("line-height", LINE_HEIGHTS[currentIndex], true);
+
+    function updateLabel() {
+      var btn = _getElementById("line-height-btn");
+      if (btn) {
+        btn.title = LINE_HEIGHT_LABELS[currentIndex];
+      }
+    }
+
+    function cycle() {
+      currentIndex = (currentIndex + 1) % LINE_HEIGHTS.length;
+      pref.set("lineHeight", String(currentIndex));
       rendition.themes.override(
         "line-height",
-        LINE_HEIGHTS[_currentLineHeight],
+        LINE_HEIGHTS[currentIndex],
         true,
       );
-      _updateLineHeightLabel();
+      updateLabel();
     }
 
-    function _updateLineHeightLabel() {
-      var btn = document.getElementById("line-height-btn");
+    function bindEvents() {
+      var btn = _getElementById("line-height-btn");
       if (btn) {
-        btn.title = LINE_HEIGHT_LABELS[_currentLineHeight];
+        btn.addEventListener("click", function (e) {
+          e.preventDefault();
+          cycle();
+        });
       }
     }
 
-    // --- Margin / Padding ---
-    var MARGINS = [
-      { padding: "0 8px" },
-      { padding: "0 24px" },
-      { padding: "0 48px" },
-    ];
-    var MARGIN_LABELS = ["邊距: 窄", "邊距: 標準", "邊距: 闊"];
-    var _currentMargin = parseInt(
-      localStorage.getItem(PREF_PREFIX + "margin") || "1",
-      10,
-    );
-    rendition.themes.override("padding", MARGINS[_currentMargin].padding, true);
+    return { updateLabel: updateLabel, cycle: cycle, bindEvents: bindEvents };
+  }
 
-    function _cycleMargin() {
-      _currentMargin = (_currentMargin + 1) % MARGINS.length;
-      localStorage.setItem(PREF_PREFIX + "margin", _currentMargin);
-      rendition.themes.override(
-        "padding",
-        MARGINS[_currentMargin].padding,
-        true,
-      );
-      _updateMarginLabel();
-    }
+  // =====================================================================
+  // Margin Manager
+  // =====================================================================
+  function _createMarginManager(rendition, pref) {
+    var currentIndex = pref.getInt("margin", 1);
+    rendition.themes.override("padding", MARGINS[currentIndex].padding, true);
 
-    function _updateMarginLabel() {
-      var btn = document.getElementById("margin-btn");
+    function updateLabel() {
+      var btn = _getElementById("margin-btn");
       if (btn) {
-        btn.title = MARGIN_LABELS[_currentMargin];
+        btn.title = MARGIN_LABELS[currentIndex];
       }
     }
 
-    // ---- 單欄 / 多欄切換 ----
-    var COLUMN_STORAGE_KEY = "epub-single-col-" + (url || "./ex.epub");
-    var _isSingleColumn = localStorage.getItem(COLUMN_STORAGE_KEY) !== "false";
-    var _originalFormat = null;
+    function cycle() {
+      currentIndex = (currentIndex + 1) % MARGINS.length;
+      pref.set("margin", String(currentIndex));
+      rendition.themes.override("padding", MARGINS[currentIndex].padding, true);
+      updateLabel();
+    }
 
-    function _applySingleColumn(layout) {
+    function bindEvents() {
+      var btn = _getElementById("margin-btn");
+      if (btn) {
+        btn.addEventListener("click", function (e) {
+          e.preventDefault();
+          cycle();
+        });
+      }
+    }
+
+    return { updateLabel: updateLabel, cycle: cycle, bindEvents: bindEvents };
+  }
+
+  // =====================================================================
+  // Column Mode Manager（單欄 / 多欄切換）
+  // =====================================================================
+  function _createColumnManager(rendition, pref) {
+    var isSingleColumn = pref.get("singleColumn", "true") !== "false";
+    var originalFormat = null;
+
+    function apply(layout) {
       if (!layout) {
         layout = rendition.manager && rendition.manager.layout;
       }
       if (!layout) return;
 
-      if (!_originalFormat) {
-        _originalFormat = layout.format.bind(layout);
+      if (!originalFormat) {
+        originalFormat = layout.format.bind(layout);
       }
 
-      if (_isSingleColumn) {
+      if (isSingleColumn) {
         layout.format = function (contents, section, axis) {
           if (this._flow === "paginated") {
             return contents.columns(
@@ -227,18 +359,18 @@
               this.settings.direction,
             );
           }
-          return _originalFormat(contents, section, axis);
+          return originalFormat(contents, section, axis);
         };
       } else {
-        layout.format = _originalFormat;
+        layout.format = originalFormat;
       }
     }
 
-    function _updateColumnToggleLabel() {
-      var btn = document.getElementById("column-toggle");
+    function updateLabel() {
+      var btn = _getElementById("column-toggle");
       if (btn) {
-        btn.title = _isSingleColumn ? "單欄模式" : "多欄模式";
-        if (_isSingleColumn) {
+        btn.title = isSingleColumn ? "單欄模式" : "多欄模式";
+        if (isSingleColumn) {
           btn.classList.add("active");
         } else {
           btn.classList.remove("active");
@@ -246,14 +378,11 @@
       }
     }
 
-    function _toggleColumnMode() {
-      _isSingleColumn = !_isSingleColumn;
-      localStorage.setItem(
-        COLUMN_STORAGE_KEY,
-        _isSingleColumn ? "true" : "false",
-      );
-      _applySingleColumn();
-      _updateColumnToggleLabel();
+    function toggle() {
+      isSingleColumn = !isSingleColumn;
+      pref.set("singleColumn", isSingleColumn ? "true" : "false");
+      apply();
+      updateLabel();
 
       var loc = rendition.currentLocation();
       if (loc && loc.start && loc.start.cfi) {
@@ -263,78 +392,69 @@
       }
     }
 
-    // 直接 apply（attached event 已經 fired，唔可以靠 listener）
-    _applySingleColumn();
-
-    // ---- Event binding ----
-    _updateThemeButtons();
-    _updateFontSizeLabel();
-    _updateLineHeightLabel();
-    _updateMarginLabel();
-    _initFontSelect();
-    _applyFont(_currentFont);
-
-    // Theme buttons
-    var themeBtns = document.querySelectorAll(
-      "#settings-bar button[data-theme]",
-    );
-    for (var ti = 0; ti < themeBtns.length; ti++) {
-      themeBtns[ti].addEventListener("click", function (e) {
-        e.preventDefault();
-        _setTheme(this.getAttribute("data-theme"));
-      });
+    function bindEvents() {
+      var btn = _getElementById("column-toggle");
+      if (btn) {
+        updateLabel();
+        btn.addEventListener("click", function (e) {
+          e.preventDefault();
+          toggle();
+        });
+      }
     }
 
-    // Font select
-    var fontSelect = document.getElementById("font-select");
-    if (fontSelect) {
-      fontSelect.addEventListener("change", function () {
-        _setFont(this.value);
-      });
-    }
+    return {
+      apply: apply,
+      updateLabel: updateLabel,
+      toggle: toggle,
+      bindEvents: bindEvents,
+    };
+  }
 
-    // Font size
-    var fsDown = document.getElementById("font-size-down");
-    var fsUp = document.getElementById("font-size-up");
-    if (fsDown) {
-      fsDown.addEventListener("click", function (e) {
-        e.preventDefault();
-        _adjustFontSize(-1);
-      });
-    }
-    if (fsUp) {
-      fsUp.addEventListener("click", function (e) {
-        e.preventDefault();
-        _adjustFontSize(1);
-      });
-    }
+  // =====================================================================
+  // 主入口 — _initSettings
+  // =====================================================================
+  window.hosReader = window.hosReader || {};
 
-    // Line height
-    var lhBtn = document.getElementById("line-height-btn");
-    if (lhBtn) {
-      lhBtn.addEventListener("click", function (e) {
-        e.preventDefault();
-        _cycleLineHeight();
-      });
-    }
+  window.hosReader._initSettings = function () {
+    var H = window.hosReader;
+    if (!H || !H.book) return;
+    var rendition = H.rendition;
+    var url = H.url || "./ex.epub";
+    var PREF_PREFIX = "epub-pref-" + url + "-";
 
-    // Margin
-    var marginBtn = document.getElementById("margin-btn");
-    if (marginBtn) {
-      marginBtn.addEventListener("click", function (e) {
-        e.preventDefault();
-        _cycleMargin();
-      });
-    }
+    var pref = _createPreferencesStore(PREF_PREFIX);
 
-    // Column toggle
-    var columnToggle = document.getElementById("column-toggle");
-    if (columnToggle) {
-      _updateColumnToggleLabel();
-      columnToggle.addEventListener("click", function (e) {
-        e.preventDefault();
-        _toggleColumnMode();
-      });
-    }
+    // --- Theme ---
+    var themeManager = _createThemeManager(rendition, pref);
+    themeManager.updateButtons();
+    themeManager.bindEvents();
+
+    // --- Font Family ---
+    var fontManager = _createFontManager(rendition, pref);
+    fontManager.initSelect();
+    fontManager.applyFont(fontManager.getCurrentFont());
+    fontManager.bindEvents();
+
+    // --- Font Size ---
+    var fontSizeManager = _createFontSizeManager(rendition, pref);
+    fontSizeManager.updateLabel();
+    fontSizeManager.bindEvents();
+
+    // --- Line Height ---
+    var lineHeightManager = _createLineHeightManager(rendition, pref);
+    lineHeightManager.updateLabel();
+    lineHeightManager.bindEvents();
+
+    // --- Margin ---
+    var marginManager = _createMarginManager(rendition, pref);
+    marginManager.updateLabel();
+    marginManager.bindEvents();
+
+    // --- Column Mode ---
+    var columnManager = _createColumnManager(rendition, pref);
+    columnManager.apply();
+    columnManager.updateLabel();
+    columnManager.bindEvents();
   };
 })();

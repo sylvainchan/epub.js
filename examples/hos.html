@@ -1,9 +1,9 @@
 <!doctype html>
-<html>
+<html lang="zh-HK">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>EPUB.js Spreads Example</title>
+    <title>EPUB.js Reader — HarmonyOS</title>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.5/jszip.min.js"></script>
     <script src="../dist/epub.js"></script>
@@ -14,69 +14,74 @@
     <link rel="stylesheet" type="text/css" href="examples.css" />
   </head>
   <body>
-    <!-- <div id="title"></div> -->
-    <select id="toc"></select>
-    <div id="settings-bar">
+    <!-- 目錄下拉選單 -->
+    <select id="toc" aria-label="目錄"></select>
+
+    <!-- 設定工具欄 -->
+    <div id="settings-bar" role="toolbar" aria-label="閱讀設定">
+      <!-- 主題切換 -->
       <span class="settings-group">
-        <button data-theme="day" title="日間模式">☀️</button>
-        <button data-theme="night" title="夜間模式">🌙</button>
-        <button data-theme="sepia" title="懷舊模式">📜</button>
+        <button data-theme="day" title="日間模式" aria-label="日間模式">☀️</button>
+        <button data-theme="night" title="夜間模式" aria-label="夜間模式">🌙</button>
+        <button data-theme="sepia" title="懷舊模式" aria-label="懷舊模式">📜</button>
       </span>
+
+      <!-- 字型選擇 -->
       <span class="settings-group">
-        <select id="font-select" title="字型">
+        <select id="font-select" title="字型" aria-label="字型">
           <option value="">預設字型</option>
-          <option
-            value="Chiron Hei HK, PingFang HK, -apple-system, BlinkMacSystemFont, Noto Sans CJK TC, Microsoft JhengHei, sans-serif"
-          >
+          <option value="Chiron Hei HK, PingFang HK, -apple-system, BlinkMacSystemFont, Noto Sans CJK TC, Microsoft JhengHei, sans-serif">
             昭源黑體
           </option>
-          <option
-            value="Chiron Sung HK, STSong, Songti SC, Noto Serif CJK TC, SimSun, MingLiU, serif"
-          >
+          <option value="Chiron Sung HK, STSong, Songti SC, Noto Serif CJK TC, SimSun, MingLiU, serif">
             昭源宋體
           </option>
-          <option
-            value="LXGW WenKai TC, KaiTi, STKaiti, BiauKai, DFKai-SB, serif"
-          >
+          <option value="LXGW WenKai TC, KaiTi, STKaiti, BiauKai, DFKai-SB, serif">
             霞鶩文楷
           </option>
-          <option
-            value="Noto Serif HK, Songti SC, STSong, SimSun, Noto Serif CJK TC, MingLiU, serif"
-          >
+          <option value="Noto Serif HK, Songti SC, STSong, SimSun, Noto Serif CJK TC, MingLiU, serif">
             思源宋體 HK
           </option>
-          <option
-            value="PingFang HK, -apple-system, BlinkMacSystemFont, Noto Sans CJK TC, Microsoft JhengHei, sans-serif"
-          >
+          <option value="PingFang HK, -apple-system, BlinkMacSystemFont, Noto Sans CJK TC, Microsoft JhengHei, sans-serif">
             黑體（系統）
           </option>
           <option value="Georgia, Times New Roman, STSong, SimSun, serif">
             襯線（系統）
           </option>
-          <option
-            value="-apple-system, BlinkMacSystemFont, Segoe UI, Helvetica Neue, Arial, sans-serif"
-          >
+          <option value="-apple-system, BlinkMacSystemFont, Segoe UI, Helvetica Neue, Arial, sans-serif">
             無襯線（系統）
           </option>
         </select>
       </span>
+
+      <!-- 字型大小 -->
       <span class="settings-group">
-        <button id="font-size-down" title="縮小字型">A⁻</button>
+        <button id="font-size-down" title="縮小字型" aria-label="縮小字型">A⁻</button>
         <span id="font-size-label">100%</span>
-        <button id="font-size-up" title="放大字型">A⁺</button>
+        <button id="font-size-up" title="放大字型" aria-label="放大字型">A⁺</button>
       </span>
+
+      <!-- 行高 -->
       <span class="settings-group">
-        <button id="line-height-btn" title="切換行高">↕️</button>
+        <button id="line-height-btn" title="切換行高" aria-label="切換行高">↕️</button>
       </span>
+
+      <!-- 邊距 -->
       <span class="settings-group">
-        <button id="margin-btn" title="切換邊距">📐</button>
+        <button id="margin-btn" title="切換邊距" aria-label="切換邊距">📐</button>
       </span>
+
+      <!-- 單欄 / 多欄 -->
       <span class="settings-group">
-        <button id="column-toggle" title="切換單欄/多欄模式">📖</button>
+        <button id="column-toggle" title="切換單欄/多欄模式" aria-label="切換單欄/多欄模式">📖</button>
       </span>
     </div>
+
+    <!-- EPUB 內容顯示區域 -->
     <div id="viewer" class="spreads"></div>
-    <a id="prev" href="#prev" class="arrow">‹</a>
-    <a id="next" href="#next" class="arrow">›</a>
+
+    <!-- 翻頁箭嘴 -->
+    <a id="prev" href="#prev" class="arrow" role="button" aria-label="上一頁">‹</a>
+    <a id="next" href="#next" class="arrow" role="button" aria-label="下一頁">›</a>
   </body>
 </html>
