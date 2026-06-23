@@ -1,5 +1,5 @@
 /* eslint-disable */
-// hos-settings.js — 自訂面板：Theme / Font / Font Size / Line Height / Margin / 單多欄 / 直橫排
+// hos-settings.js — 自訂面板：Theme / Font / Font Size / Line Height / 單多欄 / 直橫排
 // 重構版 v3：抽出通用 helper（chip / toggle / radioGroup），dedup 各 manager
 (function () {
   // =====================================================================
@@ -33,8 +33,6 @@
   var FONT_SIZE_DEFAULT_INDEX = 2; // 100%
 
   var LINE_HEIGHTS = [1.4, 1.8, 2.2];
-  var MARGINS = [4, 12, 24];
-
   // 文字對齊：left / center / right / justify
   var TEXT_ALIGNS = ["left", "center", "right", "justify"];
 
@@ -390,37 +388,6 @@
   }
 
   // =====================================================================
-  // Margin Manager
-  // =====================================================================
-  function _createMarginManager(rendition, store) {
-    var currentIndex = store.getInt("margin", -1);
-    var _apply = function (idx) {
-      if (idx >= 0 && idx < MARGINS.length) {
-        rendition.themes.override(
-          "padding",
-          MARGINS[idx] + "px " + MARGINS[idx] * 2 + "px",
-          true,
-        );
-      }
-    };
-    _apply(currentIndex);
-
-    var chip = _bindChipGroup(".margin-chip", function (idx) {
-      if (idx !== -1 && (idx < 0 || idx >= MARGINS.length)) return;
-      store.set("margin", String(idx));
-      window.location.reload();
-    });
-
-    chip.syncActive(currentIndex);
-
-    return {
-      syncActive: function () {
-        chip.syncActive(currentIndex);
-      },
-    };
-  }
-
-  // =====================================================================
   // Text Alignment Manager
   // =====================================================================
   function _createTextAlignManager(rendition, store) {
@@ -669,9 +636,6 @@
 
     // --- Line Height ---
     _createLineHeightManager(rendition, store);
-
-    // --- Margin ---
-    _createMarginManager(rendition, store);
 
     // --- Text Alignment ---
     _createTextAlignManager(rendition, store);
