@@ -411,33 +411,16 @@
       store.removeByCfi(cfi);
     }
 
-    // ---- 監聽文字選取（直接喺 content iframe 上監聽）----
-    rendition.hooks.content.register(function (contents) {
-      var doc = contents.document;
-      if (!doc) return;
+    // ---- 監聽文字選取（用 epub.js built-in "selected" event + CFI）----
+    // epub.js 內部已監聽 selectionchange/mouseup → emit "selected" 連同 CFI
+    rendition.on("selected", function (cfiRange, contents) {
+      if (!cfiRange) return;
 
-      doc.addEventListener("mouseup", function (e) {
-        setTimeout(function () {
-          _handleSelection(contents);
-        }, 10);
-      });
-
-      doc.addEventListener("touchend", function (e) {
-        setTimeout(function () {
-          _handleSelection(contents);
-        }, 300);
-      });
-    });
-
-    function _handleSelection(contents) {
       var win = contents.window || (contents.document && contents.document.defaultView);
       if (!win) return;
+
       var sel = win.getSelection();
-      if (!sel || sel.isCollapsed || !sel.toString().trim()) {
-        // 冇選取文字 → 隱藏 popup
-        popup.style.display = "none";
-        return;
-      }
+      if (!sel || sel.isCollapsed) return;
 
       var text = sel.toString().trim();
       if (!text) return;
@@ -445,28 +428,38 @@
       var range = sel.getRangeAt(0);
       if (!range) return;
 
-      // CFI 轉換
-      var cfi;
-      try {
-        cfi = contents.cfiFromRange(range);
-      } catch (_e) {
-        // 如果 CFI 轉換失敗，直接用 selection 去做 highlight（cfiFromRange 失敗時 fallback）
-        try {
-          cfi = contents.cfiFromNode(range.startContainer);
-        } catch (_e2) {
-          return;
-        }
-      }
-
-      if (!cfi) return;
-
-      currentSelectionCfi = cfi;
+      currentSelectionCfi = cfiRange;
       currentSelectionText = text;
       currentContents = contents;
 
-      // 定位 + 顯示 popup
       _positionPopup(range, win);
-    }
+    });
+
+    // ---- 隱藏 popup（當選取被清除時）----
+    rendition.hooks.content.register(function (contents) {
+      var doc = contents.document;
+      if (!doc) return;
+
+      doc.addEventListener("mouseup", function () {
+        setTimeout(function () {
+          var win = contents.window || (contents.document && contents.document.defaultView);
+          var sel = win ? win.getSelection() : null;
+          if (!sel || sel.isCollapsed) {
+            popup.style.display = "none";
+          }
+        }, 10);
+      });
+
+      doc.addEventListener("touchend", function () {
+        setTimeout(function () {
+          var win = contents.window || (contents.document && contents.document.defaultView);
+          var sel = win ? win.getSelection() : null;
+          if (!sel || sel.isCollapsed) {
+            popup.style.display = "none";
+          }
+        }, 300);
+      });
+    });
 
     // ---- 恢復已儲存 highlight（每當 content 加載時）----
     function _restoreHighlightsForContents(contents, highlightStore, rend) {

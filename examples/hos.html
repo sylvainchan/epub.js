@@ -11,6 +11,7 @@
     <script src="./hos-navigation.js"></script>
     <script src="./hos-highlights.js"></script>
     <script src="./hos-grid.js"></script>
+    <script src="./hos-scst.js"></script>
     <script src="./hos.js"></script>
 
     <link rel="stylesheet" type="text/css" href="examples.css" />
@@ -122,13 +123,12 @@
 
       <!-- 直排 / 橫排 -->
       <span class="settings-group">
-        <button
-          id="writing-mode-toggle"
-          title="切換直排/橫排"
-          aria-label="切換直排/橫排"
-        >
-          📄
-        </button>
+        <button id="writing-mode-toggle" title="切換直排/橫排" aria-label="切換直排/橫排">📄</button>
+      </span>
+
+      <!-- 繁簡轉換 -->
+      <span class="settings-group">
+        <button id="scst-toggle" title="切換繁簡中文（無→簡→繁→無）" aria-label="切換繁簡中文">繁简</button>
       </span>
 
       <!-- 九宮格設定 -->

@@ -94,7 +94,7 @@
     });
 
   // =====================================================================
-  // Wire up modules（book ready 後初始化 settings / navigation / highlights / grid）
+  // Wire up modules（book ready 後初始化 settings / navigation / highlights / grid / scst）
   // =====================================================================
   book.ready.then(function () {
     if (window.hosReader._initSettings) {
@@ -108,6 +108,9 @@
     }
     if (window.hosReader._initGrid) {
       window.hosReader._initGrid();
+    }
+    if (window.hosReader._initSCST) {
+      window.hosReader._initSCST();
     }
 
     // ---- Settings bar 內嘅 grid config button (long-press → 網格設定) ----
