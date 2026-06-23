@@ -94,14 +94,11 @@
     });
 
   // =====================================================================
-  // Wire up modules（book ready 後初始化 settings / navigation / highlights / grid / scst）
+  // Wire up modules（book ready 後初始化 settings / highlights / grid / scst）
   // =====================================================================
   book.ready.then(function () {
     if (window.hosReader._initSettings) {
       window.hosReader._initSettings();
-    }
-    if (window.hosReader._initNavigation) {
-      window.hosReader._initNavigation();
     }
     if (window.hosReader._initHighlights) {
       window.hosReader._initHighlights();

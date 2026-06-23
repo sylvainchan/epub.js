@@ -6,9 +6,8 @@
     <title>EPUB.js Reader — HarmonyOS</title>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.5/jszip.min.js"></script>
-    <script src="../dist/epub.js"></script>
+    <script src="../../dist/epub.js"></script>
     <script src="./hos-settings.js"></script>
-    <script src="./hos-navigation.js"></script>
     <script src="./hos-highlights.js"></script>
     <script src="./hos-grid.js"></script>
     <script src="./hos-scst.js"></script>
@@ -123,29 +122,41 @@
 
       <!-- 直排 / 橫排 -->
       <span class="settings-group">
-        <button id="writing-mode-toggle" title="切換直排/橫排" aria-label="切換直排/橫排">📄</button>
+        <button
+          id="writing-mode-toggle"
+          title="切換直排/橫排"
+          aria-label="切換直排/橫排"
+        >
+          📄
+        </button>
       </span>
 
       <!-- 繁簡轉換 -->
       <span class="settings-group">
-        <button id="scst-toggle" title="切換繁簡中文（無→簡→繁→無）" aria-label="切換繁簡中文">繁简</button>
+        <button
+          id="scst-toggle"
+          title="切換繁簡中文（無→簡→繁→無）"
+          aria-label="切換繁簡中文"
+        >
+          繁简
+        </button>
       </span>
 
       <!-- 九宮格設定 -->
       <span class="settings-group">
-        <button id="grid-config" title="九宮格動作設定｜或 tap 畫面底部中間" aria-label="九宮格設定">⊞</button>
+        <button
+          id="grid-config"
+          title="九宮格動作設定｜或 tap 畫面底部中間"
+          aria-label="九宮格設定"
+        >
+          ⊞
+        </button>
       </span>
     </div>
 
     <!-- EPUB 內容顯示區域 -->
     <div id="viewer" class="spreads"></div>
 
-    <!-- 翻頁箭嘴 -->
-    <a id="prev" href="#prev" class="arrow" role="button" aria-label="上一頁"
-      >‹</a
-    >
-    <a id="next" href="#next" class="arrow" role="button" aria-label="下一頁"
-      >›</a
-    >
+
   </body>
 </html>
