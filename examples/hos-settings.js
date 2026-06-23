@@ -2,8 +2,6 @@
 // hos-settings.js — 自訂面板：Theme / Font / Font Size / Line Height / Margin / 單多欄
 // 重構版：提取 PreferencesStore、消除重複 pattern、var→let/const
 (function () {
-  "use strict";
-
   // =====================================================================
   // 常數
   // =====================================================================
@@ -54,17 +52,6 @@
   }
 
   // =====================================================================
-  // DOM helpers
-  // =====================================================================
-  function _getElementById(id) {
-    return document.getElementById(id);
-  }
-
-  function _querySelectorAll(selector) {
-    return document.querySelectorAll(selector);
-  }
-
-  // =====================================================================
   // Font face CSS builder
   // =====================================================================
   function _buildFontFaceCss() {
@@ -102,7 +89,7 @@
     rendition.themes.select(currentTheme);
 
     function _updateButtons(activeTheme) {
-      var btns = _querySelectorAll("#settings-bar button[data-theme]");
+      var btns = document.querySelectorAll("#settings-bar button[data-theme]");
       for (var j = 0; j < btns.length; j++) {
         var btn = btns[j];
         if (btn.getAttribute("data-theme") === activeTheme) {
@@ -121,7 +108,7 @@
     }
 
     function bindEvents() {
-      var btns = _querySelectorAll("#settings-bar button[data-theme]");
+      var btns = document.querySelectorAll("#settings-bar button[data-theme]");
       for (var k = 0; k < btns.length; k++) {
         btns[k].addEventListener("click", function (e) {
           e.preventDefault();
@@ -188,14 +175,14 @@
     }
 
     function initSelect() {
-      var sel = _getElementById("font-select");
+      var sel = document.getElementById("font-select");
       if (sel) {
         sel.value = currentFont;
       }
     }
 
     function bindEvents() {
-      var sel = _getElementById("font-select");
+      var sel = document.getElementById("font-select");
       if (sel) {
         sel.addEventListener("change", function () {
           setFont(this.value);
@@ -222,7 +209,7 @@
     rendition.themes.fontSize(currentSize + "%");
 
     function updateLabel() {
-      var label = _getElementById("font-size-label");
+      var label = document.getElementById("font-size-label");
       if (label) {
         label.textContent = currentSize + "%";
       }
@@ -240,8 +227,8 @@
     }
 
     function bindEvents() {
-      var downBtn = _getElementById("font-size-down");
-      var upBtn = _getElementById("font-size-up");
+      var downBtn = document.getElementById("font-size-down");
+      var upBtn = document.getElementById("font-size-up");
       if (downBtn) {
         downBtn.addEventListener("click", function (e) {
           e.preventDefault();
@@ -267,7 +254,7 @@
     rendition.themes.override("line-height", LINE_HEIGHTS[currentIndex], true);
 
     function updateLabel() {
-      var btn = _getElementById("line-height-btn");
+      var btn = document.getElementById("line-height-btn");
       if (btn) {
         btn.title = LINE_HEIGHT_LABELS[currentIndex];
       }
@@ -285,7 +272,7 @@
     }
 
     function bindEvents() {
-      var btn = _getElementById("line-height-btn");
+      var btn = document.getElementById("line-height-btn");
       if (btn) {
         btn.addEventListener("click", function (e) {
           e.preventDefault();
@@ -305,7 +292,7 @@
     rendition.themes.override("padding", MARGINS[currentIndex].padding, true);
 
     function updateLabel() {
-      var btn = _getElementById("margin-btn");
+      var btn = document.getElementById("margin-btn");
       if (btn) {
         btn.title = MARGIN_LABELS[currentIndex];
       }
@@ -319,7 +306,7 @@
     }
 
     function bindEvents() {
-      var btn = _getElementById("margin-btn");
+      var btn = document.getElementById("margin-btn");
       if (btn) {
         btn.addEventListener("click", function (e) {
           e.preventDefault();
@@ -367,7 +354,7 @@
     }
 
     function updateLabel() {
-      var btn = _getElementById("column-toggle");
+      var btn = document.getElementById("column-toggle");
       if (btn) {
         btn.title = isSingleColumn ? "單欄模式" : "多欄模式";
         if (isSingleColumn) {
@@ -393,7 +380,7 @@
     }
 
     function bindEvents() {
-      var btn = _getElementById("column-toggle");
+      var btn = document.getElementById("column-toggle");
       if (btn) {
         updateLabel();
         btn.addEventListener("click", function (e) {

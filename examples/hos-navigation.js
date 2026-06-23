@@ -2,8 +2,6 @@
 // hos-navigation.js — 導航：Swipe / 窄螢幕偵測 / 箭嘴 / 鍵盤 / Resize
 // 重構版：提取 RTL 翻頁邏輯、移除重複 keyListener、var→let/const
 (function () {
-  'use strict';
-
   // ---- 常數 ----
   var NARROW_BREAKPOINT = 768;
   var SWIPE_MIN_DISTANCE = 30;
@@ -52,10 +50,6 @@
       }
     }
     return true;
-  }
-
-  function _getElementById(id) {
-    return document.getElementById(id);
   }
 
   // ---- UI 箭嘴操作 ----
@@ -131,7 +125,7 @@
 
   // ---- 箭嘴按鈕 ----
   function _bindArrowButton(id, direction, book, rendition) {
-    var el = _getElementById(id);
+    var el = document.getElementById(id);
     if (!el) return;
     el.addEventListener('click', function (e) {
       _navigate(direction, book, rendition);
@@ -173,8 +167,8 @@
     var book = H.book;
     var rendition = H.rendition;
 
-    var prevEl = _getElementById('prev');
-    var nextEl = _getElementById('next');
+    var prevEl = document.getElementById('prev');
+    var nextEl = document.getElementById('next');
 
     // 箭嘴按鈕
     _bindArrowButton('prev', 'backward', book, rendition);
