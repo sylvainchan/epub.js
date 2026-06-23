@@ -94,7 +94,7 @@
     });
 
   // =====================================================================
-  // Wire up modules（book ready 後初始化 settings / navigation）
+  // Wire up modules（book ready 後初始化 settings / navigation / highlights / grid）
   // =====================================================================
   book.ready.then(function () {
     if (window.hosReader._initSettings) {
@@ -102,6 +102,21 @@
     }
     if (window.hosReader._initNavigation) {
       window.hosReader._initNavigation();
+    }
+    if (window.hosReader._initHighlights) {
+      window.hosReader._initHighlights();
+    }
+    if (window.hosReader._initGrid) {
+      window.hosReader._initGrid();
+    }
+
+    // ---- Settings bar 內嘅 grid config button (long-press → 網格設定) ----
+    var gridCfgBtn = document.getElementById("grid-config");
+    if (gridCfgBtn && window.hosReader.grid) {
+      gridCfgBtn.addEventListener("click", function (e) {
+        e.preventDefault();
+        window.hosReader.grid.showConfig();
+      });
     }
   });
 

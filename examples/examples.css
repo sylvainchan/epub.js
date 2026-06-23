@@ -8,6 +8,8 @@ body {
   height: 100%;
   width: 100%;
   /* min-height: 800px; */
+  /* 消除 mobile click 300ms 延遲 */
+  touch-action: manipulation;
 }
 
 #title {
@@ -25,15 +27,18 @@ body {
 }
 
 #viewer.spreads {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   width: 100%;
   height: 100%;
-  box-shadow: 0 0 4px #ccc;
-  border-radius: 5px;
+  margin: 0;
+  border-radius: 0;
+  box-shadow: none;
   padding: 0;
-  position: relative;
-  margin: 10px auto;
   background: white url("ajax-loader.gif") center center no-repeat;
-  top: calc(50vh - 400px);
 }
 
 #viewer.spreads .epub-view > iframe {
@@ -64,39 +69,55 @@ body {
 }
 
 #toc {
-  display: block;
-  margin: 10px auto;
+  position: fixed;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  max-width: 70vw;
+  font-size: 14px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
-/* ---- 自訂面板 ---- */
+/* ---- 自訂面板（overlay on reader）---- */
 #settings-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
   align-items: center;
-  justify-content: center;
-  gap: 6px;
-  margin: 6px auto;
-  padding: 4px 10px;
-  max-width: 900px;
-}
-
-.settings-group {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
+  justify-content: flex-start;
+  gap: 4px;
+  margin: 0;
+  padding: 6px 8px;
+  padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  max-width: 100%;
 }
 
 #settings-bar button,
 #settings-bar select {
-  font-size: 14px;
-  padding: 4px 10px;
+  font-size: 13px;
+  padding: 4px 8px;
+  min-width: 32px;
+  min-height: 28px;
   border-radius: 6px;
   border: 1px solid rgba(0, 0, 0, 0.12);
-  background: rgba(255, 255, 255, 0.9);
+  background: transparent;
   cursor: pointer;
   white-space: nowrap;
-  min-width: 36px;
-  min-height: 32px;
 }
 
 #settings-bar select {
@@ -115,6 +136,21 @@ body {
 #settings-bar button.active {
   background: rgba(0, 0, 0, 0.12);
   border-color: rgba(0, 0, 0, 0.25);
+}
+
+.settings-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+#font-size-label {
+  display: inline-block;
+  min-width: 42px;
+  text-align: center;
+  font-size: 13px;
+  color: #666;
 }
 
 #font-size-label {
@@ -342,30 +378,11 @@ svg {
 @media (max-width: 768px) {
   body {
     /* 防止雙擊縮放干擾翻頁 */
-    touch-action: manipulation;
     -webkit-touch-callout: none;
     -webkit-user-select: none;
     user-select: none;
     /* Safe area 全面屏適配 */
     padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-  }
-
-  #viewer.spreads {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    width: 100%;
-    height: 100%;
-    margin: 0;
-    border-radius: 0;
-    box-shadow: none;
-    /* safe-area 內縮 */
-    top: env(safe-area-inset-top, 0px);
-    bottom: env(safe-area-inset-bottom, 0px);
-    left: env(safe-area-inset-left, 0px);
-    right: env(safe-area-inset-right, 0px);
   }
 
   /* 箭嘴縮細，放底部兩側，半透明唔遮字 */
@@ -377,7 +394,6 @@ svg {
     color: rgba(0, 0, 0, 0.25);
     z-index: 10;
     padding: 12px 16px;
-    /* 加大 touch target */
     min-width: 44px;
     min-height: 44px;
     display: flex;
@@ -397,61 +413,19 @@ svg {
     color: rgba(0, 0, 0, 0.5);
   }
 
-  #toc {
-    position: fixed;
-    top: env(safe-area-inset-top, 8px);
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 20;
-    max-width: 70vw;
-    font-size: 14px;
-    padding: 4px 8px;
-    border-radius: 6px;
-    background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    border: 1px solid rgba(0, 0, 0, 0.1);
-  }
-
   /* 隱藏 spread 分隔線 */
   #viewer.spreads:after {
     display: none !important;
-  }
-
-  /* 窄螢幕：settings bar 放底部，簡化 */
-  #settings-bar {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 20;
-    margin: 0;
-    padding: 6px 8px;
-    padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
-    gap: 4px;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    justify-content: flex-start;
-    background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border-top: 1px solid rgba(0, 0, 0, 0.08);
-    max-width: 100%;
   }
 
   #settings-bar button,
   #settings-bar select {
     font-size: 12px;
     padding: 4px 8px;
-    min-width: 32px;
-    min-height: 28px;
-    background: transparent;
-    border: 1px solid rgba(0, 0, 0, 0.08);
   }
 
   #font-size-label {
     font-size: 11px;
-    min-width: 34px;
   }
 
   #font-select {

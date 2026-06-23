@@ -5,13 +5,21 @@
   // =====================================================================
   // 常數
   // =====================================================================
-  var THEME_NAMES = ["day", "night", "sepia"];
+  var THEME_NAMES = ["day", "night", "sepia", "green", "gray", "contrast", "dark-sepia"];
   var THEME_CSS = {
     day: "body { background: #fff !important; } body, p, div, span, h1, h2, h3, h4, h5, h6 { color: #333 !important; }",
     night:
       "body { background: #1a1a1a !important; } body, p, div, span, h1, h2, h3, h4, h5, h6 { color: #ccc !important; }",
     sepia:
       "body { background: #f4ecd8 !important; } body, p, div, span, h1, h2, h3, h4, h5, h6 { color: #5b4636 !important; }",
+    green:
+      "body { background: #c8dcc8 !important; } body, p, div, span, h1, h2, h3, h4, h5, h6 { color: #2d3e2d !important; }",
+    gray:
+      "body { background: #e8e8e8 !important; } body, p, div, span, h1, h2, h3, h4, h5, h6 { color: #333 !important; }",
+    contrast:
+      "body { background: #000 !important; } body, p, div, span, h1, h2, h3, h4, h5, h6 { color: #fff !important; }",
+    "dark-sepia":
+      "body { background: #3e3524 !important; } body, p, div, span, h1, h2, h3, h4, h5, h6 { color: #d4c5a9 !important; }",
   };
 
   var FONT_SIZES = [80, 90, 100, 110, 120, 140, 160, 180, 200];
@@ -399,6 +407,78 @@
   }
 
   // =====================================================================
+  // Writing Mode Manager（直排 / 橫排切換）
+  // =====================================================================
+  function _createWritingModeManager(rendition, pref) {
+    var isVertical = pref.get("writingMode", "horizontal") === "vertical";
+
+    var WRITING_MODE_CSS =
+      "body { writing-mode: vertical-rl !important; " +
+      "-webkit-writing-mode: vertical-rl !important; " +
+      "text-orientation: mixed !important; " +
+      "-webkit-text-orientation: mixed !important; " +
+      "max-height: 100% !important; " +
+      "overflow-x: auto !important; }";
+
+    function apply() {
+      var list = rendition.getContents();
+      for (var i = 0; i < list.length; i++) {
+        if (isVertical) {
+          list[i].addStylesheetCss(WRITING_MODE_CSS, "writing-mode-override");
+        } else {
+          list[i].addStylesheetCss("", "writing-mode-override");
+        }
+      }
+    }
+
+    // 注入到新 content
+    rendition.hooks.content.register(function (contents) {
+      if (isVertical) {
+        contents.addStylesheetCss(WRITING_MODE_CSS, "writing-mode-override");
+      }
+    });
+
+    function updateLabel() {
+      var btn = document.getElementById("writing-mode-toggle");
+      if (btn) {
+        btn.title = isVertical ? "直排模式" : "橫排模式";
+        if (isVertical) {
+          btn.classList.add("active");
+        } else {
+          btn.classList.remove("active");
+        }
+      }
+    }
+
+    function toggle() {
+      isVertical = !isVertical;
+      pref.set("writingMode", isVertical ? "vertical" : "horizontal");
+      apply();
+      updateLabel();
+      // resize 令 reflowable layout 重新計算
+      rendition.resize();
+    }
+
+    function bindEvents() {
+      var btn = document.getElementById("writing-mode-toggle");
+      if (btn) {
+        updateLabel();
+        btn.addEventListener("click", function (e) {
+          e.preventDefault();
+          toggle();
+        });
+      }
+    }
+
+    return {
+      apply: apply,
+      updateLabel: updateLabel,
+      toggle: toggle,
+      bindEvents: bindEvents,
+    };
+  }
+
+  // =====================================================================
   // 主入口 — _initSettings
   // =====================================================================
   window.hosReader = window.hosReader || {};
@@ -443,5 +523,11 @@
     columnManager.apply();
     columnManager.updateLabel();
     columnManager.bindEvents();
+
+    // --- Writing Mode (直排/橫排) ---
+    var writingModeManager = _createWritingModeManager(rendition, pref);
+    writingModeManager.apply();
+    writingModeManager.updateLabel();
+    writingModeManager.bindEvents();
   };
 })();
