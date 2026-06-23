@@ -144,16 +144,48 @@
 	// --- Font Family ---
 	var _currentFont = localStorage.getItem(PREF_PREFIX + "font") || "";
 
-	function _applyFont(family) {
-		// 用 registerCss inject 完整 CSS rule 落所有文字元素，
-		// 確保 override 到 EPUB 內容自帶嘅 font-family
-		if (family) {
-			rendition.themes.registerCss("font-override",
+	// 計絕對路徑：iframe 入面 relative URL 會指咗去 EPUB 內部，所以要用 absolute
+	var _fontBaseUrl = window.location.href.replace(/\/[^/]*$/, "/");
+
+	// 自訂 @font-face（examples/fonts/ 字型檔）
+	var _customFontFaceCss =
+		"@font-face { font-family: 'Chiron Hei HK'; src: url('" + _fontBaseUrl + "fonts/ChironHeiHK-Regular.ttf') format('truetype'); font-weight: normal; font-style: normal; }" +
+		"@font-face { font-family: 'Chiron Sung HK'; src: url('" + _fontBaseUrl + "fonts/ChironSungHK-Regular.ttf') format('truetype'); font-weight: normal; font-style: normal; }" +
+		"@font-face { font-family: 'LXGW WenKai TC'; src: url('" + _fontBaseUrl + "fonts/LXGWWenKaiTC-Regular.ttf') format('truetype'); font-weight: normal; font-style: normal; }" +
+		"@font-face { font-family: 'Noto Serif HK'; src: url('" + _fontBaseUrl + "fonts/NotoSerifHK-Regular.ttf') format('truetype'); font-weight: normal; font-style: normal; }";
+
+	// 每個 chapter iframe 注入 @font-face + 當前字型 CSS
+	// 唔用 themes.registerCss 因為佢只 inject current/default theme，
+	// 換章節時 "font-override" 唔係 current theme 所以唔會 re-apply
+	rendition.hooks.content.register(function (contents) {
+		if (_customFontFaceCss) {
+			contents.addStylesheetCss(_customFontFaceCss, "custom-font-face");
+		}
+		if (_currentFont) {
+			contents.addStylesheetCss(
 				"body, p, div, span, li, td, th, h1, h2, h3, h4, h5, h6, blockquote, pre { " +
-				"font-family: " + family + " !important; }");
+				"font-family: " + _currentFont + " !important; }",
+				"font-override"
+			);
+		}
+	});
+
+	function _applyFont(family) {
+		if (family) {
+			// 遍歷所有已載入嘅 iframe 即時套用字型
+			var contents = rendition.getContents();
+			contents.forEach(function (c) {
+				c.addStylesheetCss(
+					"body, p, div, span, li, td, th, h1, h2, h3, h4, h5, h6, blockquote, pre { " +
+					"font-family: " + family + " !important; }",
+					"font-override"
+				);
+			});
 		} else {
-			// 預設字型：清空 override
-			rendition.themes.registerCss("font-override", "");
+			var contents2 = rendition.getContents();
+			contents2.forEach(function (c) {
+				c.addStylesheetCss("", "font-override");
+			});
 		}
 	}
 
