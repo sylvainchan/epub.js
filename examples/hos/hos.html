@@ -2,7 +2,10 @@
 <html lang="zh-HK">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no"
+    />
     <title>EPUB.js Reader — HarmonyOS</title>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.5/jszip.min.js"></script>
@@ -16,147 +19,161 @@
     <link rel="stylesheet" type="text/css" href="examples.css" />
   </head>
   <body>
-    <!-- 目錄下拉選單 -->
-    <select id="toc" aria-label="目錄"></select>
+    <!-- ================================================================= -->
+    <!-- TOC 下拉選單（預設隱藏，由底部 bar 或 grid toggle） -->
+    <!-- ================================================================= -->
+    <select id="toc" aria-label="目錄" class="hidden"></select>
 
-    <!-- 設定工具欄 -->
-    <div id="settings-bar" role="toolbar" aria-label="閱讀設定">
-      <!-- 主題切換（基礎 + 進階） -->
-      <span class="settings-group">
-        <button data-theme="day" title="日間模式" aria-label="日間模式">
-          ☀️
-        </button>
-        <button data-theme="night" title="夜間模式" aria-label="夜間模式">
-          🌙
-        </button>
-        <button data-theme="sepia" title="懷舊模式" aria-label="懷舊模式">
-          📜
-        </button>
-        <button data-theme="green" title="護眼綠" aria-label="護眼綠">
-          🟢
-        </button>
-        <button data-theme="gray" title="極簡灰" aria-label="極簡灰">🪨</button>
-        <button data-theme="contrast" title="高對比度" aria-label="高對比度">
-          ◼️
-        </button>
-        <button data-theme="dark-sepia" title="深褐模式" aria-label="深褐模式">
-          🟤
-        </button>
-      </span>
+    <!-- ================================================================= -->
+    <!-- EPUB 內容顯示區域 -->
+    <!-- ================================================================= -->
+    <div id="viewer" class="spreads has-bottom-bar"></div>
 
-      <!-- 字型選擇 -->
-      <span class="settings-group">
-        <select id="font-select" title="字型" aria-label="字型">
-          <option value="">預設字型</option>
-          <option
-            value="Chiron Hei HK, PingFang HK, -apple-system, BlinkMacSystemFont, Noto Sans CJK TC, Microsoft JhengHei, sans-serif"
-          >
-            昭源黑體
-          </option>
-          <option
-            value="Chiron Sung HK, STSong, Songti SC, Noto Serif CJK TC, SimSun, MingLiU, serif"
-          >
-            昭源宋體
-          </option>
-          <option
-            value="LXGW WenKai TC, KaiTi, STKaiti, BiauKai, DFKai-SB, serif"
-          >
-            霞鶩文楷
-          </option>
-          <option
-            value="Noto Serif HK, Songti SC, STSong, SimSun, Noto Serif CJK TC, MingLiU, serif"
-          >
-            思源宋體 HK
-          </option>
-          <option
-            value="PingFang HK, -apple-system, BlinkMacSystemFont, Noto Sans CJK TC, Microsoft JhengHei, sans-serif"
-          >
-            黑體（系統）
-          </option>
-          <option value="Georgia, Times New Roman, STSong, SimSun, serif">
-            襯線（系統）
-          </option>
-          <option
-            value="-apple-system, BlinkMacSystemFont, Segoe UI, Helvetica Neue, Arial, sans-serif"
-          >
-            無襯線（系統）
-          </option>
-        </select>
-      </span>
-
-      <!-- 字型大小 -->
-      <span class="settings-group">
-        <button id="font-size-down" title="縮小字型" aria-label="縮小字型">
-          A⁻
-        </button>
-        <span id="font-size-label">100%</span>
-        <button id="font-size-up" title="放大字型" aria-label="放大字型">
-          A⁺
-        </button>
-      </span>
-
-      <!-- 行高 -->
-      <span class="settings-group">
-        <button id="line-height-btn" title="切換行高" aria-label="切換行高">
-          ↕️
-        </button>
-      </span>
-
-      <!-- 邊距 -->
-      <span class="settings-group">
-        <button id="margin-btn" title="切換邊距" aria-label="切換邊距">
-          📐
-        </button>
-      </span>
-
-      <!-- 單欄 / 多欄 -->
-      <span class="settings-group">
-        <button
-          id="column-toggle"
-          title="切換單欄/多欄模式"
-          aria-label="切換單欄/多欄模式"
-        >
-          📖
-        </button>
-      </span>
-
-      <!-- 直排 / 橫排 -->
-      <span class="settings-group">
-        <button
-          id="writing-mode-toggle"
-          title="切換直排/橫排"
-          aria-label="切換直排/橫排"
-        >
-          📄
-        </button>
-      </span>
-
-      <!-- 繁簡轉換 -->
-      <span class="settings-group">
-        <button
-          id="scst-toggle"
-          title="切換繁簡中文（無→簡→繁→無）"
-          aria-label="切換繁簡中文"
-        >
-          繁简
-        </button>
-      </span>
-
-      <!-- 九宮格設定 -->
-      <span class="settings-group">
-        <button
-          id="grid-config"
-          title="九宮格動作設定｜或 tap 畫面底部中間"
-          aria-label="九宮格設定"
-        >
-          ⊞
-        </button>
-      </span>
+    <!-- ================================================================= -->
+    <!-- 底部控制列（簡潔版） -->
+    <!-- ================================================================= -->
+    <div id="bottom-bar" role="toolbar" aria-label="閱讀控制">
+      <div class="bar-group">
+        <button id="bottom-toc" title="目錄" aria-label="目錄">📑</button>
+      </div>
+      <div class="bar-group">
+        <button id="bottom-prev" title="上一頁" aria-label="上一頁">◀</button>
+        <span class="bar-center" id="page-info">—</span>
+        <button id="bottom-next" title="下一頁" aria-label="下一頁">▶</button>
+      </div>
+      <div class="bar-group">
+        <button id="bottom-settings" title="閱讀設定" aria-label="閱讀設定">⚙️</button>
+      </div>
     </div>
 
-    <!-- EPUB 內容顯示區域 -->
-    <div id="viewer" class="spreads"></div>
+    <!-- ================================================================= -->
+    <!-- 設定彈窗（Bottom Sheet） -->
+    <!-- ================================================================= -->
+    <div class="overlay" id="settings-overlay">
+      <div class="popup-sheet" role="dialog" aria-label="閱讀設定">
+        <div class="popup-sheet-header">
+          <span class="sheet-title">⚙️ 閱讀設定</span>
+          <button class="sheet-close" id="settings-close">✕</button>
+        </div>
+        <div class="popup-sheet-body">
+          <!-- ---- 主題 ---- -->
+          <div class="settings-section">
+            <div class="settings-section-label">🎨 主題</div>
+            <div class="theme-swatch-row" id="theme-swatches">
+              <button class="theme-swatch" data-theme="day" title="日間模式" aria-label="日間模式">
+                <div class="theme-swatch-circle" style="background:#fff; border:1px solid #ddd;"></div>
+                <span class="theme-swatch-label">日間</span>
+              </button>
+              <button class="theme-swatch" data-theme="night" title="夜間模式" aria-label="夜間模式">
+                <div class="theme-swatch-circle" style="background:#1a1a1a;"></div>
+                <span class="theme-swatch-label">夜間</span>
+              </button>
+              <button class="theme-swatch" data-theme="sepia" title="懷舊模式" aria-label="懷舊模式">
+                <div class="theme-swatch-circle" style="background:#f4ecd8; border:1px solid #d9ceb5;"></div>
+                <span class="theme-swatch-label">懷舊</span>
+              </button>
+              <button class="theme-swatch" data-theme="green" title="護眼綠" aria-label="護眼綠">
+                <div class="theme-swatch-circle" style="background:#c8dcc8; border:1px solid #a8c4a8;"></div>
+                <span class="theme-swatch-label">護眼</span>
+              </button>
+              <button class="theme-swatch" data-theme="gray" title="極簡灰" aria-label="極簡灰">
+                <div class="theme-swatch-circle" style="background:#e8e8e8; border:1px solid #ccc;"></div>
+                <span class="theme-swatch-label">極簡</span>
+              </button>
+              <button class="theme-swatch" data-theme="contrast" title="高對比度" aria-label="高對比度">
+                <div class="theme-swatch-circle" style="background:#000;"></div>
+                <span class="theme-swatch-label">高對比</span>
+              </button>
+              <button class="theme-swatch" data-theme="dark-sepia" title="深褐模式" aria-label="深褐模式">
+                <div class="theme-swatch-circle" style="background:#3e3524;"></div>
+                <span class="theme-swatch-label">深褐</span>
+              </button>
+            </div>
+          </div>
 
+          <!-- ---- 字型 ---- -->
+          <div class="settings-section">
+            <div class="settings-section-label">🔤 字型</div>
+            <div class="settings-select-row">
+              <select id="font-select" title="字型" aria-label="字型">
+                <option value="">預設字型</option>
+                <option value="Chiron Hei HK, PingFang HK, -apple-system, BlinkMacSystemFont, Noto Sans CJK TC, Microsoft JhengHei, sans-serif">昭源黑體</option>
+                <option value="Chiron Sung HK, STSong, Songti SC, Noto Serif CJK TC, SimSun, MingLiU, serif">昭源宋體</option>
+                <option value="LXGW WenKai TC, KaiTi, STKaiti, BiauKai, DFKai-SB, serif">霞鶩文楷</option>
+                <option value="Noto Serif HK, Songti SC, STSong, SimSun, Noto Serif CJK TC, MingLiU, serif">思源宋體 HK</option>
+                <option value="PingFang HK, -apple-system, BlinkMacSystemFont, Noto Sans CJK TC, Microsoft JhengHei, sans-serif">黑體（系統）</option>
+                <option value="Georgia, Times New Roman, STSong, SimSun, serif">襯線（系統）</option>
+                <option value="-apple-system, BlinkMacSystemFont, Segoe UI, Helvetica Neue, Arial, sans-serif">無襯線（系統）</option>
+              </select>
+            </div>
+          </div>
 
+          <!-- ---- 字型大小 ---- -->
+          <div class="settings-section">
+            <div class="settings-section-label">📏 字型大小</div>
+            <div class="stepper-row">
+              <button class="stepper-btn" id="font-size-down" title="縮小字型" aria-label="縮小字型">A⁻</button>
+              <span class="stepper-value" id="font-size-label">100%</span>
+              <button class="stepper-btn" id="font-size-up" title="放大字型" aria-label="放大字型">A⁺</button>
+            </div>
+          </div>
+
+          <!-- ---- 行距 ---- -->
+          <div class="settings-section">
+            <div class="settings-section-label">📏 行距</div>
+            <div class="option-chips" id="line-height-chips">
+              <button class="option-chip line-height-chip" data-index="0">窄</button>
+              <button class="option-chip line-height-chip active" data-index="1">標準</button>
+              <button class="option-chip line-height-chip" data-index="2">闊</button>
+            </div>
+          </div>
+
+          <!-- ---- 邊距 ---- -->
+          <div class="settings-section">
+            <div class="settings-section-label">📏 邊距</div>
+            <div class="option-chips" id="margin-chips">
+              <button class="option-chip margin-chip" data-index="0">窄</button>
+              <button class="option-chip margin-chip active" data-index="1">標準</button>
+              <button class="option-chip margin-chip" data-index="2">闊</button>
+            </div>
+          </div>
+
+          <!-- ---- 版面模式 ---- -->
+          <div class="settings-section">
+            <div class="settings-section-label">📖 版面模式</div>
+            <div class="toggle-row">
+              <span class="toggle-row-label">單欄模式</span>
+              <label class="toggle-switch">
+                <input type="checkbox" id="column-toggle" checked />
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div class="toggle-row">
+              <span class="toggle-row-label">直排模式</span>
+              <label class="toggle-switch">
+                <input type="checkbox" id="writing-mode-toggle" />
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- ---- 進階 ---- -->
+          <div class="settings-section">
+            <div class="settings-section-label">🔧 進階</div>
+            <button class="action-btn" id="scst-toggle" title="切換繁簡中文">
+              繁简轉換
+            </button>
+            <button class="action-btn" id="grid-config" title="九宮格動作設定" style="margin-top:8px;">
+              ⊞ 九宮格設定
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- 隱藏嘅 settings-bar（向後兼容，hos-settings.js 部分 selector 用到） -->
+    <!-- ================================================================= -->
+    <div id="settings-bar" style="display:none !important" aria-hidden="true"></div>
   </body>
 </html>

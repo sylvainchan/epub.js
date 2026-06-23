@@ -1,31 +1,30 @@
+/* =====================================================================
+   EPUB.js Reader — HarmonyOS 專用樣式
+   重構版：Popup 設定面板、安全區域適配、深色主題支援
+   ===================================================================== */
+
+/* ---------- Reset & Base ---------- */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
-  background: #fafafa;
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  padding: 0;
+  background: #f5f5f5;
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "PingFang HK", "Noto Sans CJK TC", sans-serif;
   color: #333;
-
   position: absolute;
   height: 100%;
   width: 100%;
-  /* min-height: 800px; */
-  /* 消除 mobile click 300ms 延遲 */
+  overflow: hidden;
   touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
-#title {
-  width: 900px;
-  min-height: 18px;
-  margin: 10px auto;
-  text-align: center;
-  font-size: 16px;
-  color: #e2e2e2;
-  font-weight: 400;
-}
-
-#title:hover {
-  color: #777;
-}
-
+/* =====================================================================
+   EPUB Viewer（核心閱讀區域）
+   ===================================================================== */
 #viewer.spreads {
   position: fixed;
   top: 0;
@@ -39,6 +38,17 @@ body {
   box-shadow: none;
   padding: 0;
   background: white url("ajax-loader.gif") center center no-repeat;
+  /* Safe area: 確保內容不被瀏海/手勢條遮擋 */
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+  /* 當有底部工具列顯示時，留出空間 */
+  transition: padding-bottom 0.3s ease;
+}
+
+#viewer.spreads.has-bottom-bar {
+  padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px));
 }
 
 #viewer.spreads .epub-view > iframe {
@@ -60,107 +70,7 @@ body {
   background: white;
 }
 
-#prev {
-  left: 0;
-}
-
-#next {
-  right: 0;
-}
-
-#toc {
-  position: fixed;
-  top: 8px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 20;
-  max-width: 70vw;
-  font-size: 14px;
-  padding: 4px 8px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(0, 0, 0, 0.1);
-}
-
-/* ---- 自訂面板（overlay on reader）---- */
-#settings-bar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 20;
-  display: flex;
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 4px;
-  margin: 0;
-  padding: 6px 8px;
-  padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
-  max-width: 100%;
-}
-
-#settings-bar button,
-#settings-bar select {
-  font-size: 13px;
-  padding: 4px 8px;
-  min-width: 32px;
-  min-height: 28px;
-  border-radius: 6px;
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  background: transparent;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-#settings-bar select {
-  padding: 4px 6px;
-}
-
-#settings-bar button:hover,
-#settings-bar select:hover {
-  background: rgba(0, 0, 0, 0.05);
-}
-
-#settings-bar button:active {
-  background: rgba(0, 0, 0, 0.1);
-}
-
-#settings-bar button.active {
-  background: rgba(0, 0, 0, 0.12);
-  border-color: rgba(0, 0, 0, 0.25);
-}
-
-.settings-group {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  flex-shrink: 0;
-}
-
-#font-size-label {
-  display: inline-block;
-  min-width: 42px;
-  text-align: center;
-  font-size: 13px;
-  color: #666;
-}
-
-#font-size-label {
-  display: inline-block;
-  min-width: 42px;
-  text-align: center;
-  font-size: 13px;
-  color: #666;
-}
-
+/* ---- Spread divider ---- */
 @media (min-width: 1000px) {
   #viewer.spreads:after {
     position: absolute;
@@ -179,256 +89,680 @@ body {
   #viewer.spreads.single:after {
     display: none;
   }
-
-  #prev {
-    left: 40px;
-  }
-
-  #next {
-    right: 40px;
-  }
 }
 
-.arrow {
+/* =====================================================================
+   Bottom Bar（底部控制列 — 簡潔版）
+   ===================================================================== */
+#bottom-bar {
   position: fixed;
-  top: 50%;
-  margin-top: -32px;
-  font-size: 64px;
-  color: #e2e2e2;
-  font-family: arial, sans-serif;
-  font-weight: bold;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 48px;
+  padding: 0 8px;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+#bottom-bar.hidden {
+  transform: translateY(100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+#bottom-bar button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: #555;
+  font-size: 18px;
   cursor: pointer;
-  -webkit-user-select: none;
-  -moz-user-select: none;
+  transition: background 0.15s, color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#bottom-bar button:active {
+  background: rgba(0, 0, 0, 0.08);
+  color: #222;
+}
+
+#bottom-bar .bar-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+#bottom-bar .bar-center {
+  font-size: 12px;
+  color: #999;
+  font-weight: 500;
+  min-width: 60px;
+  text-align: center;
   user-select: none;
-  text-decoration: none;
 }
 
-.navlink {
-  margin: 14px;
-  display: block;
-  text-align: center;
-  text-decoration: none;
-  color: #ccc;
-}
-
-.arrow:hover,
-.navlink:hover {
-  color: #777;
-}
-
-.arrow:active,
-.navlink:hover {
-  color: #000;
-}
-
-#book-wrapper {
-  width: 480px;
-  height: 640px;
-  overflow: hidden;
-  border: 1px solid #ccc;
-  margin: 28px auto;
-  background: #fff;
-  border-radius: 0 5px 5px 0;
-  position: absolute;
-}
-
-#book-viewer {
-  width: 480px;
-  height: 660px;
-  margin: -30px auto;
-  -moz-box-shadow: inset 10px 0 20px rgba(0, 0, 0, 0.1);
-  -webkit-box-shadow: inset 10px 0 20px rgba(0, 0, 0, 0.1);
-  box-shadow: inset 10px 0 20px rgba(0, 0, 0, 0.1);
-}
-
-#book-viewer iframe {
-  padding: 40px 40px;
-}
-
-#controls {
-  position: absolute;
-  bottom: 16px;
+/* =====================================================================
+   TOC Dropdown（頂部目錄 — 保留但有改進樣式）
+   ===================================================================== */
+#toc {
+  position: fixed;
+  top: 8px;
+  top: calc(8px + env(safe-area-inset-top, 0px));
   left: 50%;
-  width: 400px;
-  margin-left: -200px;
-  text-align: center;
-  display: none;
+  transform: translateX(-50%);
+  z-index: 25;
+  max-width: 70vw;
+  font-size: 13px;
+  padding: 6px 32px 6px 12px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  color: #333;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  outline: none;
+  transition: opacity 0.3s ease;
 }
 
-#controls > input[type="range"] {
-  width: 400px;
+#toc.hidden {
+  opacity: 0;
+  pointer-events: none;
 }
 
-#navigation {
-  width: 400px;
-  height: 100vh;
-  position: absolute;
-  overflow: auto;
+/* =====================================================================
+   Overlay / Popup Base
+   ===================================================================== */
+.overlay {
+  position: fixed;
   top: 0;
   left: 0;
-  background: #777;
-  -webkit-transition: -webkit-transform 0.25s ease-out;
-  -moz-transition: -moz-transform 0.25s ease-out;
-  -ms-transition: -moz-transform 0.25s ease-out;
-  transition: transform 0.25s ease-out;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 1000;
+  display: none;
+  justify-content: center;
+  align-items: flex-end;
+  animation: overlayFadeIn 0.2s ease;
 }
 
-#navigation.fixed {
-  position: fixed;
+.overlay.show {
+  display: flex;
 }
 
-#navigation h1 {
-  width: 200px;
+@keyframes overlayFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Bottom-sheet style popup */
+.popup-sheet {
+  width: 100%;
+  max-width: 480px;
+  max-height: 80vh;
+  background: #fff;
+  border-radius: 20px 20px 0 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.15);
+  animation: sheetSlideUp 0.25s ease;
+}
+
+@keyframes sheetSlideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+.popup-sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px 10px;
+  border-bottom: 1px solid #eee;
+  flex-shrink: 0;
+}
+
+.popup-sheet-header .sheet-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: #222;
+}
+
+.popup-sheet-header .sheet-close {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: #f0f0f0;
+  color: #666;
   font-size: 16px;
-  font-weight: normal;
-  color: #fff;
-  margin-bottom: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
 }
 
-#navigation h2 {
-  font-size: 14px;
-  font-weight: normal;
-  color: #b0b0b0;
+.popup-sheet-header .sheet-close:active {
+  background: #ddd;
+}
+
+.popup-sheet-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px 24px;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* =====================================================================
+   Settings Sheet — 各個設定區塊
+   ===================================================================== */
+.settings-section {
   margin-bottom: 20px;
 }
 
-#navigation ul {
-  padding-left: 36px;
-  margin-left: 0;
-  margin-top: 12px;
-  margin-bottom: 12px;
-  width: 340px;
+.settings-section:last-child {
+  margin-bottom: 8px;
 }
 
-#navigation ul li {
-  list-style: decimal;
-  margin-bottom: 10px;
-  color: #cccddd;
+.settings-section-label {
   font-size: 12px;
-  padding-left: 0;
-  margin-left: 0;
+  font-weight: 600;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+  padding-left: 2px;
 }
 
-#navigation ul li a {
-  color: #ccc;
-  text-decoration: none;
+/* ---- Theme Swatches ---- */
+.theme-swatch-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
-#navigation ul li a:hover {
-  color: #fff;
-  text-decoration: underline;
+.theme-swatch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  border: none;
+  background: none;
+  padding: 0;
 }
 
-#navigation ul li a.active {
-  color: #fff;
+.theme-swatch-circle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+  position: relative;
 }
 
-#navigation #cover {
-  display: block;
-  margin: 24px auto;
+.theme-swatch.active .theme-swatch-circle {
+  border-color: #1976d2;
+  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.2);
 }
 
-#navigation #closer {
+.theme-swatch-circle:active {
+  transform: scale(0.92);
+}
+
+.theme-swatch-label {
+  font-size: 11px;
+  color: #777;
+  text-align: center;
+}
+
+/* ---- Select Row ---- */
+.settings-select-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.settings-select-row select {
+  flex: 1;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  font-size: 14px;
+  color: #333;
+  background: #fafafa;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+
+/* ---- Stepper Row (font size) ---- */
+.stepper-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 6px 0;
+}
+
+.stepper-btn {
+  width: 40px;
+  height: 40px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  background: #fafafa;
+  color: #555;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.stepper-btn:active {
+  background: #e8e8e8;
+}
+
+.stepper-value {
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+  min-width: 60px;
+  text-align: center;
+}
+
+/* ---- Option Chips ---- */
+.option-chips {
+  display: flex;
+  gap: 8px;
+}
+
+.option-chip {
+  flex: 1;
+  padding: 10px 8px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  background: #fafafa;
+  color: #666;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s;
+}
+
+.option-chip:active {
+  background: #e8e8e8;
+}
+
+.option-chip.active {
+  background: #e3f2fd;
+  border-color: #1976d2;
+  color: #1565c0;
+  font-weight: 500;
+}
+
+/* ---- Toggle Row ---- */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 4px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.toggle-row:last-child {
+  border-bottom: none;
+}
+
+.toggle-row-label {
+  font-size: 14px;
+  color: #444;
+}
+
+.toggle-switch {
+  position: relative;
+  width: 50px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
   position: absolute;
-  top: 0;
-  right: 0;
+}
+
+.toggle-switch .slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: #ddd;
+  border-radius: 14px;
+  transition: background 0.2s;
+}
+
+.toggle-switch .slider::before {
+  content: "";
+  position: absolute;
+  height: 22px;
+  width: 22px;
+  left: 3px;
+  bottom: 3px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.toggle-switch input:checked + .slider {
+  background: #1976d2;
+}
+
+.toggle-switch input:checked + .slider::before {
+  transform: translateX(22px);
+}
+
+/* ---- Action Button ---- */
+.action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
   padding: 12px;
-  color: #cccddd;
-  width: 24px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  background: #fafafa;
+  color: #555;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
 }
 
-#navigation.closed {
-  -webkit-transform: translate(-400px, 0);
-  -moz-transform: translate(-400px, 0);
-  -ms-transform: translate(-400px, 0);
-  transform: translate(-400px, 0);
+.action-btn:active {
+  background: #e8e8e8;
 }
 
-svg {
-  display: block;
+.action-btn.active {
+  background: #e3f2fd;
+  border-color: #1976d2;
+  color: #1565c0;
 }
 
-.close-x {
-  stroke: #cccddd;
-  fill: transparent;
-  stroke-linecap: round;
-  stroke-width: 5;
-}
-
-.close-x:hover {
-  stroke: #fff;
-}
-
-#opener {
-  position: absolute;
+/* =====================================================================
+   Grid Config Panel（九宮格設定 — hos-grid.js 用到）
+   ===================================================================== */
+.hos-grid-config-overlay {
+  position: fixed;
   top: 0;
   left: 0;
-  padding: 10px;
-  stroke: #e2e2e2;
-  fill: #e2e2e2;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 2000;
+  display: none;
+  justify-content: center;
+  align-items: center;
 }
 
-#opener:hover {
-  stroke: #777;
-  fill: #777;
+/* =====================================================================
+   Highlight Popup（hos-highlights.js 用到）
+   ===================================================================== */
+.hos-hl-popup {
+  position: absolute;
+  z-index: 9999;
+  display: none;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.18);
+  padding: 8px 10px;
+  user-select: none;
+  font-size: 14px;
+  line-height: 1;
+  white-space: nowrap;
+  border: 1px solid #e0e0e0;
 }
 
-/* ---- 窄螢幕（手機 / 平板豎屏）特別處理 ---- */
+/* =====================================================================
+   Note Overlay（hos-highlights.js 用到）
+   ===================================================================== */
+.hos-note-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 2000;
+  display: none;
+  justify-content: center;
+  align-items: center;
+}
+
+/* =====================================================================
+   Dark Mode — UI Chrome only（不影響書本內容嘅主題）
+   ===================================================================== */
+@media (prefers-color-scheme: dark) {
+  body {
+    background: #121212;
+    color: #ddd;
+  }
+
+  #bottom-bar {
+    background: rgba(30, 30, 30, 0.94);
+    border-top-color: rgba(255, 255, 255, 0.08);
+  }
+
+  #bottom-bar button {
+    color: #bbb;
+  }
+
+  #bottom-bar button:active {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+  }
+
+  #bottom-bar .bar-center {
+    color: #888;
+  }
+
+  #toc {
+    background: rgba(30, 30, 30, 0.9);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #ddd;
+  }
+
+  .popup-sheet {
+    background: #1e1e1e;
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.4);
+  }
+
+  .popup-sheet-header {
+    border-bottom-color: #333;
+  }
+
+  .popup-sheet-header .sheet-title {
+    color: #eee;
+  }
+
+  .popup-sheet-header .sheet-close {
+    background: #333;
+    color: #bbb;
+  }
+
+  .settings-section-label {
+    color: #888;
+  }
+
+  .settings-select-row select {
+    background: #2a2a2a;
+    border-color: #444;
+    color: #ddd;
+  }
+
+  .stepper-btn {
+    background: #2a2a2a;
+    border-color: #444;
+    color: #bbb;
+  }
+
+  .stepper-btn:active {
+    background: #3a3a3a;
+  }
+
+  .stepper-value {
+    color: #eee;
+  }
+
+  .option-chip {
+    background: #2a2a2a;
+    border-color: #444;
+    color: #999;
+  }
+
+  .option-chip.active {
+    background: #0d3b66;
+    border-color: #42a5f5;
+    color: #90caf9;
+  }
+
+  .action-btn {
+    background: #2a2a2a;
+    border-color: #444;
+    color: #bbb;
+  }
+
+  .action-btn.active {
+    background: #0d3b66;
+    border-color: #42a5f5;
+    color: #90caf9;
+  }
+
+  .toggle-row {
+    border-bottom-color: #333;
+  }
+
+  .toggle-row-label {
+    color: #ccc;
+  }
+
+  .popup-sheet-body {
+    scrollbar-color: #444 #1e1e1e;
+  }
+
+  .hos-hl-popup {
+    background: #1e1e1e;
+    border-color: #444;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  }
+
+  .theme-swatch-label {
+    color: #999;
+  }
+}
+
+/* =====================================================================
+   Mobile Adjustments（窄螢幕 — 手機/平板豎屏）
+   ===================================================================== */
 @media (max-width: 768px) {
   body {
-    /* 防止雙擊縮放干擾翻頁 */
     -webkit-touch-callout: none;
     -webkit-user-select: none;
     user-select: none;
-    /* Safe area 全面屏適配 */
-    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   }
 
-  /* 箭嘴縮細，放底部兩側，半透明唔遮字 */
-  .arrow {
-    font-size: 36px;
-    top: auto;
-    bottom: 24px;
-    margin-top: 0;
-    color: rgba(0, 0, 0, 0.25);
-    z-index: 10;
-    padding: 12px 16px;
-    min-width: 44px;
-    min-height: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  #prev {
-    left: 8px;
-  }
-
-  #next {
-    right: 8px;
-  }
-
-  .arrow:active {
-    color: rgba(0, 0, 0, 0.5);
-  }
-
-  /* 隱藏 spread 分隔線 */
   #viewer.spreads:after {
     display: none !important;
   }
 
-  #settings-bar button,
-  #settings-bar select {
+  /* 底部 bar 高度增加以適合手指觸控 */
+  #bottom-bar {
+    height: 52px;
+    padding: 0 12px;
+  }
+
+  #bottom-bar button {
+    width: 44px;
+    height: 44px;
+  }
+
+  /* 隱藏底部 bar 時 viewer 完全撐滿 */
+  #viewer.spreads.has-bottom-bar {
+    padding-bottom: calc(52px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* TOC 下拉選單調整 */
+  #toc {
     font-size: 12px;
-    padding: 4px 8px;
+    max-width: 80vw;
+    padding: 6px 28px 6px 10px;
   }
 
-  #font-size-label {
-    font-size: 11px;
+  /* Popup sheet 全寬 */
+  .popup-sheet {
+    max-width: 100%;
+    border-radius: 20px 20px 0 0;
   }
 
-  #font-select {
-    max-width: 80px;
+  .popup-sheet-body {
+    padding: 12px 16px 24px;
   }
+
+  .theme-swatch-row {
+    gap: 8px;
+  }
+
+  .theme-swatch-circle {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+/* =====================================================================
+   Legacy（保留舊有 class 向後相容）
+   ===================================================================== */
+#settings-bar {
+  display: none !important; /* 舊嘅 settings-bar 已被 popup 取代 */
+}
+
+.arrow {
+  display: none; /* 箭嘴已被 bottom bar 導航取代 */
+}
+
+.settings-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+#font-size-label {
+  display: inline-block;
+  min-width: 42px;
+  text-align: center;
+  font-size: 13px;
+  color: #666;
 }

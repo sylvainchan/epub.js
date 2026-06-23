@@ -184,8 +184,8 @@
   function _getCellIndex(clientX, clientY) {
     var w = window.innerWidth;
     var h = window.innerHeight;
-    // 底部留 48px 畀 settings bar
-    var usableH = h - 48;
+    // 底部留 56px 畀 bottom bar + safe area
+    var usableH = h - 56;
     var col = Math.floor(clientX / (w / 3));
     var row = Math.floor(clientY / (usableH / 3));
     if (col < 0) col = 0;
@@ -236,14 +236,22 @@
     function _toggleToc() {
       var toc = document.getElementById("toc");
       if (toc) {
-        toc.style.display = toc.style.display === "none" ? "" : "none";
+        if (toc.classList.contains("hidden")) {
+          toc.classList.remove("hidden");
+        } else {
+          toc.classList.add("hidden");
+        }
       }
     }
 
     function _toggleSettings() {
-      var bar = document.getElementById("settings-bar");
-      if (bar) {
-        bar.style.display = bar.style.display === "none" ? "" : "none";
+      var overlay = document.getElementById("settings-overlay");
+      if (overlay) {
+        if (overlay.classList.contains("show")) {
+          overlay.classList.remove("show");
+        } else {
+          overlay.classList.add("show");
+        }
       }
     }
 

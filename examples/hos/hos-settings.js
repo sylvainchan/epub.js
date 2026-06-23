@@ -1,6 +1,6 @@
 /* eslint-disable */
 // hos-settings.js — 自訂面板：Theme / Font / Font Size / Line Height / Margin / 單多欄
-// 重構版：提取 PreferencesStore、消除重複 pattern、var→let/const
+// 重構版 v2：Popup-based UI、chip selectors、toggle switches
 (function () {
   // =====================================================================
   // 常數
@@ -26,14 +26,12 @@
   var FONT_SIZE_DEFAULT_INDEX = 2; // 100%
 
   var LINE_HEIGHTS = [1.4, 1.8, 2.2];
-  var LINE_HEIGHT_LABELS = ["行高: 窄", "行高: 標準", "行高: 闊"];
 
   var MARGINS = [
-    { padding: "0 8px" },
-    { padding: "0 24px" },
-    { padding: "0 48px" },
+    { padding: "4px 8px" },
+    { padding: "12px 24px" },
+    { padding: "24px 48px" },
   ];
-  var MARGIN_LABELS = ["邊距: 窄", "邊距: 標準", "邊距: 闊"];
 
   var FONT_OVERRIDE_SELECTOR =
     "body, p, div, span, li, td, th, h1, h2, h3, h4, h5, h6, blockquote, pre";
@@ -97,7 +95,7 @@
     rendition.themes.select(currentTheme);
 
     function _updateButtons(activeTheme) {
-      var btns = document.querySelectorAll("#settings-bar button[data-theme]");
+      var btns = document.querySelectorAll("button[data-theme]");
       for (var j = 0; j < btns.length; j++) {
         var btn = btns[j];
         if (btn.getAttribute("data-theme") === activeTheme) {
@@ -116,7 +114,7 @@
     }
 
     function bindEvents() {
-      var btns = document.querySelectorAll("#settings-bar button[data-theme]");
+      var btns = document.querySelectorAll("button[data-theme]");
       for (var k = 0; k < btns.length; k++) {
         btns[k].addEventListener("click", function (e) {
           e.preventDefault();
@@ -255,79 +253,93 @@
   }
 
   // =====================================================================
-  // Line Height Manager
+  // Line Height Manager（改用 option chips）
   // =====================================================================
   function _createLineHeightManager(rendition, pref) {
     var currentIndex = pref.getInt("lineHeight", 1);
     rendition.themes.override("line-height", LINE_HEIGHTS[currentIndex], true);
 
-    function updateLabel() {
-      var btn = document.getElementById("line-height-btn");
-      if (btn) {
-        btn.title = LINE_HEIGHT_LABELS[currentIndex];
+    function updateChips() {
+      var chips = document.querySelectorAll(".line-height-chip");
+      for (var i = 0; i < chips.length; i++) {
+        var idx = parseInt(chips[i].getAttribute("data-index"), 10);
+        if (idx === currentIndex) {
+          chips[i].classList.add("active");
+        } else {
+          chips[i].classList.remove("active");
+        }
       }
     }
 
-    function cycle() {
-      currentIndex = (currentIndex + 1) % LINE_HEIGHTS.length;
+    function setIndex(index) {
+      if (index < 0 || index >= LINE_HEIGHTS.length) return;
+      currentIndex = index;
       pref.set("lineHeight", String(currentIndex));
       rendition.themes.override(
         "line-height",
         LINE_HEIGHTS[currentIndex],
         true,
       );
-      updateLabel();
+      updateChips();
     }
 
     function bindEvents() {
-      var btn = document.getElementById("line-height-btn");
-      if (btn) {
-        btn.addEventListener("click", function (e) {
+      var chips = document.querySelectorAll(".line-height-chip");
+      for (var i = 0; i < chips.length; i++) {
+        chips[i].addEventListener("click", function (e) {
           e.preventDefault();
-          cycle();
+          var idx = parseInt(this.getAttribute("data-index"), 10);
+          setIndex(idx);
         });
       }
     }
 
-    return { updateLabel: updateLabel, cycle: cycle, bindEvents: bindEvents };
+    return { updateChips: updateChips, setIndex: setIndex, bindEvents: bindEvents };
   }
 
   // =====================================================================
-  // Margin Manager
+  // Margin Manager（改用 option chips）
   // =====================================================================
   function _createMarginManager(rendition, pref) {
     var currentIndex = pref.getInt("margin", 1);
     rendition.themes.override("padding", MARGINS[currentIndex].padding, true);
 
-    function updateLabel() {
-      var btn = document.getElementById("margin-btn");
-      if (btn) {
-        btn.title = MARGIN_LABELS[currentIndex];
+    function updateChips() {
+      var chips = document.querySelectorAll(".margin-chip");
+      for (var i = 0; i < chips.length; i++) {
+        var idx = parseInt(chips[i].getAttribute("data-index"), 10);
+        if (idx === currentIndex) {
+          chips[i].classList.add("active");
+        } else {
+          chips[i].classList.remove("active");
+        }
       }
     }
 
-    function cycle() {
-      currentIndex = (currentIndex + 1) % MARGINS.length;
+    function setIndex(index) {
+      if (index < 0 || index >= MARGINS.length) return;
+      currentIndex = index;
       pref.set("margin", String(currentIndex));
       rendition.themes.override("padding", MARGINS[currentIndex].padding, true);
-      updateLabel();
+      updateChips();
     }
 
     function bindEvents() {
-      var btn = document.getElementById("margin-btn");
-      if (btn) {
-        btn.addEventListener("click", function (e) {
+      var chips = document.querySelectorAll(".margin-chip");
+      for (var i = 0; i < chips.length; i++) {
+        chips[i].addEventListener("click", function (e) {
           e.preventDefault();
-          cycle();
+          var idx = parseInt(this.getAttribute("data-index"), 10);
+          setIndex(idx);
         });
       }
     }
 
-    return { updateLabel: updateLabel, cycle: cycle, bindEvents: bindEvents };
+    return { updateChips: updateChips, setIndex: setIndex, bindEvents: bindEvents };
   }
 
   // =====================================================================
-  // Column Mode Manager（單欄 / 多欄切換）
+  // Column Mode Manager（改用 toggle switch）
   // =====================================================================
   function _createColumnManager(rendition, pref) {
     var isSingleColumn = pref.get("singleColumn", "true") !== "false";
@@ -361,15 +373,10 @@
       }
     }
 
-    function updateLabel() {
-      var btn = document.getElementById("column-toggle");
-      if (btn) {
-        btn.title = isSingleColumn ? "單欄模式" : "多欄模式";
-        if (isSingleColumn) {
-          btn.classList.add("active");
-        } else {
-          btn.classList.remove("active");
-        }
+    function updateToggle() {
+      var cb = document.getElementById("column-toggle");
+      if (cb) {
+        cb.checked = isSingleColumn;
       }
     }
 
@@ -377,7 +384,7 @@
       isSingleColumn = !isSingleColumn;
       pref.set("singleColumn", isSingleColumn ? "true" : "false");
       apply();
-      updateLabel();
+      updateToggle();
 
       var loc = rendition.currentLocation();
       if (loc && loc.start && loc.start.cfi) {
@@ -388,26 +395,34 @@
     }
 
     function bindEvents() {
-      var btn = document.getElementById("column-toggle");
-      if (btn) {
-        updateLabel();
-        btn.addEventListener("click", function (e) {
-          e.preventDefault();
-          toggle();
+      var cb = document.getElementById("column-toggle");
+      if (cb) {
+        updateToggle();
+        cb.addEventListener("change", function () {
+          isSingleColumn = cb.checked;
+          pref.set("singleColumn", isSingleColumn ? "true" : "false");
+          apply();
+
+          var loc = rendition.currentLocation();
+          if (loc && loc.start && loc.start.cfi) {
+            rendition.display(loc.start.cfi);
+          } else {
+            rendition.resize();
+          }
         });
       }
     }
 
     return {
       apply: apply,
-      updateLabel: updateLabel,
+      updateToggle: updateToggle,
       toggle: toggle,
       bindEvents: bindEvents,
     };
   }
 
   // =====================================================================
-  // Writing Mode Manager（直排 / 橫排切換）
+  // Writing Mode Manager（改用 toggle switch）
   // =====================================================================
   function _createWritingModeManager(rendition, pref) {
     var isVertical = pref.get("writingMode", "horizontal") === "vertical";
@@ -438,15 +453,10 @@
       }
     });
 
-    function updateLabel() {
-      var btn = document.getElementById("writing-mode-toggle");
-      if (btn) {
-        btn.title = isVertical ? "直排模式" : "橫排模式";
-        if (isVertical) {
-          btn.classList.add("active");
-        } else {
-          btn.classList.remove("active");
-        }
+    function updateToggle() {
+      var cb = document.getElementById("writing-mode-toggle");
+      if (cb) {
+        cb.checked = isVertical;
       }
     }
 
@@ -454,28 +464,143 @@
       isVertical = !isVertical;
       pref.set("writingMode", isVertical ? "vertical" : "horizontal");
       apply();
-      updateLabel();
-      // resize 令 reflowable layout 重新計算
+      updateToggle();
       rendition.resize();
     }
 
     function bindEvents() {
-      var btn = document.getElementById("writing-mode-toggle");
-      if (btn) {
-        updateLabel();
-        btn.addEventListener("click", function (e) {
-          e.preventDefault();
-          toggle();
+      var cb = document.getElementById("writing-mode-toggle");
+      if (cb) {
+        updateToggle();
+        cb.addEventListener("change", function () {
+          isVertical = cb.checked;
+          pref.set("writingMode", isVertical ? "vertical" : "horizontal");
+          apply();
+          rendition.resize();
         });
       }
     }
 
     return {
       apply: apply,
-      updateLabel: updateLabel,
+      updateToggle: updateToggle,
       toggle: toggle,
       bindEvents: bindEvents,
     };
+  }
+
+  // =====================================================================
+  // Settings Popup Controller
+  // =====================================================================
+  function _createSettingsPopup() {
+    var overlay = document.getElementById("settings-overlay");
+    var closeBtn = document.getElementById("settings-close");
+    var triggerBtn = document.getElementById("bottom-settings");
+
+    function open() {
+      if (overlay) {
+        overlay.classList.add("show");
+      }
+    }
+
+    function close() {
+      if (overlay) {
+        overlay.classList.remove("show");
+      }
+    }
+
+    function bindEvents() {
+      if (closeBtn) {
+        closeBtn.addEventListener("click", function (e) {
+          e.preventDefault();
+          close();
+        });
+      }
+      if (overlay) {
+        overlay.addEventListener("click", function (e) {
+          if (e.target === overlay) {
+            close();
+          }
+        });
+      }
+      if (triggerBtn) {
+        triggerBtn.addEventListener("click", function (e) {
+          e.preventDefault();
+          open();
+        });
+      }
+    }
+
+    return { open: open, close: close, bindEvents: bindEvents };
+  }
+
+  // =====================================================================
+  // TOC + Bottom Bar Controller
+  // =====================================================================
+  function _createBottomBarController(rendition, book) {
+    var tocEl = document.getElementById("toc");
+    var tocBtn = document.getElementById("bottom-toc");
+    var prevBtn = document.getElementById("bottom-prev");
+    var nextBtn = document.getElementById("bottom-next");
+    var pageInfo = document.getElementById("page-info");
+    var viewer = document.getElementById("viewer");
+    var bottomBar = document.getElementById("bottom-bar");
+
+    function _isRtl() {
+      return book && book.package && book.package.metadata &&
+        book.package.metadata.direction === "rtl";
+    }
+
+    function updatePageInfo() {
+      if (!pageInfo || !rendition) return;
+      try {
+        var loc = rendition.currentLocation();
+        if (loc && loc.start) {
+          var pct = loc.start.percentage || 0;
+          pageInfo.textContent = Math.round(pct * 100) + "%";
+        }
+      } catch (_e) {
+        pageInfo.textContent = "—";
+      }
+    }
+
+    function bindEvents() {
+      // TOC toggle
+      if (tocBtn && tocEl) {
+        tocBtn.addEventListener("click", function (e) {
+          e.preventDefault();
+          if (tocEl.classList.contains("hidden")) {
+            tocEl.classList.remove("hidden");
+          } else {
+            tocEl.classList.add("hidden");
+          }
+        });
+      }
+
+      // Prev / Next
+      if (prevBtn) {
+        prevBtn.addEventListener("click", function (e) {
+          e.preventDefault();
+          _isRtl() ? rendition.next() : rendition.prev();
+        });
+      }
+      if (nextBtn) {
+        nextBtn.addEventListener("click", function (e) {
+          e.preventDefault();
+          _isRtl() ? rendition.prev() : rendition.next();
+        });
+      }
+
+      // 監聽 relocate 更新頁碼
+      rendition.on("relocated", function () {
+        updatePageInfo();
+      });
+    }
+
+    // 初始更新
+    updatePageInfo();
+
+    return { updatePageInfo: updatePageInfo, bindEvents: bindEvents };
   }
 
   // =====================================================================
@@ -487,10 +612,19 @@
     var H = window.hosReader;
     if (!H || !H.book) return;
     var rendition = H.rendition;
+    var book = H.book;
     var url = H.url || "./ex.epub";
     var PREF_PREFIX = "epub-pref-" + url + "-";
 
     var pref = _createPreferencesStore(PREF_PREFIX);
+
+    // --- Settings Popup ---
+    var popup = _createSettingsPopup();
+    popup.bindEvents();
+
+    // --- Bottom Bar ---
+    var bottomBar = _createBottomBarController(rendition, book);
+    bottomBar.bindEvents();
 
     // --- Theme ---
     var themeManager = _createThemeManager(rendition, pref);
@@ -510,24 +644,24 @@
 
     // --- Line Height ---
     var lineHeightManager = _createLineHeightManager(rendition, pref);
-    lineHeightManager.updateLabel();
+    lineHeightManager.updateChips();
     lineHeightManager.bindEvents();
 
     // --- Margin ---
     var marginManager = _createMarginManager(rendition, pref);
-    marginManager.updateLabel();
+    marginManager.updateChips();
     marginManager.bindEvents();
 
     // --- Column Mode ---
     var columnManager = _createColumnManager(rendition, pref);
     columnManager.apply();
-    columnManager.updateLabel();
+    columnManager.updateToggle();
     columnManager.bindEvents();
 
     // --- Writing Mode (直排/橫排) ---
     var writingModeManager = _createWritingModeManager(rendition, pref);
     writingModeManager.apply();
-    writingModeManager.updateLabel();
+    writingModeManager.updateToggle();
     writingModeManager.bindEvents();
   };
 })();
