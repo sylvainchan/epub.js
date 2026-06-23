@@ -86,7 +86,9 @@
       var dy = e.changedTouches[0].clientY - startY;
       var dt = Date.now() - startTime;
       if (!_shouldNavigate(dx, dy, dt)) return;
-      _navigate(dx > 0 ? 'forward' : 'backward', book, rendition);
+      // Swipe right (dx > 0) = 去上一頁 → 'backward'
+      // Swipe left  (dx < 0) = 去下一頁 → 'forward'
+      _navigate(dx > 0 ? 'backward' : 'forward', book, rendition);
     }, { passive: true });
 
     doc.addEventListener('touchcancel', function () {
@@ -107,7 +109,9 @@
       var dx = e.clientX - startX;
       var dy = e.clientY - startY;
       if (!_shouldNavigate(dx, dy, 0)) return;
-      _navigate(dx > 0 ? 'forward' : 'backward', book, rendition);
+      // Swipe right (dx > 0) = 去上一頁 → 'backward'
+      // Swipe left  (dx < 0) = 去下一頁 → 'forward'
+      _navigate(dx > 0 ? 'backward' : 'forward', book, rendition);
     });
   }
 
