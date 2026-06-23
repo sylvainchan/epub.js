@@ -1,6 +1,6 @@
 /* eslint-disable */
-// hos-settings.js — 自訂面板：Theme / Font / Font Size / Line Height / Margin / 單多欄
-// 重構版 v2：Popup-based UI、chip selectors、toggle switches
+// hos-settings.js — 自訂面板：Theme / Font / Font Size / Line Height / Margin / 單多欄 / 直橫排
+// 重構版 v3：抽出通用 helper（chip / toggle / radioGroup），dedup 各 manager
 (function () {
   // =====================================================================
   // 常數
@@ -33,33 +33,141 @@
   var FONT_SIZE_DEFAULT_INDEX = 2; // 100%
 
   var LINE_HEIGHTS = [1.4, 1.8, 2.2];
-
-  var MARGINS = [
-    { padding: "4px 8px" },
-    { padding: "12px 24px" },
-    { padding: "24px 48px" },
-  ];
+  var MARGINS = [4, 12, 24]; // 只存 px 值，用時砌 padding
 
   var FONT_OVERRIDE_SELECTOR =
     "body, p, div, span, li, td, th, h1, h2, h3, h4, h5, h6, blockquote, pre";
 
   // =====================================================================
-  // PreferencesStore — 封裝 localStorage + prefix
+  // Generic helpers
   // =====================================================================
-  function _createPreferencesStore(prefix) {
+
+  // Preferences store（localStorage + prefix）
+  function _createStore(prefix) {
     return {
-      get: function (key, fallback) {
+      get: function (key, def) {
         var v = localStorage.getItem(prefix + key);
-        return v !== null ? v : fallback;
+        return v !== null ? v : def;
       },
-      getInt: function (key, fallback) {
+      getInt: function (key, def) {
         var raw = localStorage.getItem(prefix + key);
-        if (raw === null) return fallback;
-        var parsed = parseInt(raw, 10);
-        return isNaN(parsed) ? fallback : parsed;
+        if (raw === null) return def;
+        var n = parseInt(raw, 10);
+        return isNaN(n) ? def : n;
       },
-      set: function (key, value) {
-        localStorage.setItem(prefix + key, value);
+      getBool: function (key, def) {
+        var raw = localStorage.getItem(prefix + key);
+        if (raw === null) return def;
+        return raw !== "false";
+      },
+      set: function (key, val) {
+        localStorage.setItem(prefix + key, val);
+      },
+    };
+  }
+
+  // Chip group：click chip → set active → call onChange(index, value)
+  function _bindChipGroup(selector, onChange) {
+    var chips = document.querySelectorAll(selector);
+    for (var i = 0; i < chips.length; i++) {
+      chips[i].addEventListener("click", function (e) {
+        e.preventDefault();
+        var idx = parseInt(this.getAttribute("data-index"), 10);
+        if (isNaN(idx)) return;
+        // 更新 active
+        for (var j = 0; j < chips.length; j++) {
+          chips[j].classList.toggle(
+            "active",
+            parseInt(chips[j].getAttribute("data-index"), 10) === idx,
+          );
+        }
+        onChange(idx);
+      });
+    }
+    return {
+      syncActive: function (activeIdx) {
+        for (var k = 0; k < chips.length; k++) {
+          chips[k].classList.toggle(
+            "active",
+            parseInt(chips[k].getAttribute("data-index"), 10) === activeIdx,
+          );
+        }
+      },
+    };
+  }
+
+  // Radio button group：click button[data-*] → set active → call onChange(value)
+  function _bindRadioGroup(selector, attr, onChange) {
+    var btns = document.querySelectorAll(selector);
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].addEventListener("click", function (e) {
+        e.preventDefault();
+        var val = this.getAttribute(attr);
+        if (!val) return;
+        for (var j = 0; j < btns.length; j++) {
+          btns[j].classList.toggle(
+            "active",
+            btns[j].getAttribute(attr) === val,
+          );
+        }
+        onChange(val);
+      });
+    }
+    return {
+      syncActive: function (activeVal) {
+        for (var k = 0; k < btns.length; k++) {
+          btns[k].classList.toggle(
+            "active",
+            btns[k].getAttribute(attr) === activeVal,
+          );
+        }
+      },
+    };
+  }
+
+  // Toggle switch：checkbox change → call onChange(isChecked)
+  function _bindToggle(checkboxId, onChange) {
+    var cb = document.getElementById(checkboxId);
+    if (!cb) return { sync: function () {}, onChange: function () {} };
+    cb.addEventListener("change", function () {
+      onChange(cb.checked);
+    });
+    return {
+      sync: function (checked) {
+        cb.checked = checked;
+      },
+      get checked() {
+        return cb.checked;
+      },
+    };
+  }
+
+  // CSS injector：hook 自動注入 + applyToAll 手動同步
+  // cssBuilder(isActive) 返回 CSS string
+  // inactive 時 inject "body {}"（non-empty）做 replace-clear
+  function _createCssInjector(rendition, cssId, cssBuilder) {
+    var _active = false;
+
+    function _applyToAll() {
+      var css = cssBuilder(_active);
+      var list = rendition.getContents();
+      for (var i = 0; i < list.length; i++) {
+        list[i].addStylesheetCss(css, cssId);
+      }
+    }
+
+    rendition.hooks.content.register(function (contents) {
+      contents.addStylesheetCss(cssBuilder(_active), cssId);
+    });
+
+    return {
+      updateActive: function (val) {
+        _active = val;
+        _applyToAll();
+      },
+      applyToAll: _applyToAll,
+      get active() {
+        return _active;
       },
     };
   }
@@ -93,105 +201,85 @@
   // =====================================================================
   // Theme Manager
   // =====================================================================
-  function _createThemeManager(rendition, pref) {
-    // 註冊所有 theme CSS
+  function _createThemeManager(rendition, store) {
     for (var i = 0; i < THEME_NAMES.length; i++) {
       rendition.themes.registerCss(THEME_NAMES[i], THEME_CSS[THEME_NAMES[i]]);
     }
-    var currentTheme = pref.get("theme", "day");
+    var currentTheme = store.get("theme", "day");
     rendition.themes.select(currentTheme);
 
-    function _updateButtons(activeTheme) {
-      var btns = document.querySelectorAll("button[data-theme]");
-      for (var j = 0; j < btns.length; j++) {
-        var btn = btns[j];
-        if (btn.getAttribute("data-theme") === activeTheme) {
-          btn.classList.add("active");
-        } else {
-          btn.classList.remove("active");
-        }
-      }
-    }
+    var radio = _bindRadioGroup(
+      "button[data-theme]",
+      "data-theme",
+      function (name) {
+        currentTheme = name;
+        store.set("theme", name);
+        rendition.themes.select(name);
+      },
+    );
 
-    function setTheme(name) {
-      currentTheme = name;
-      pref.set("theme", name);
-      rendition.themes.select(name);
-      _updateButtons(name);
-    }
-
-    function bindEvents() {
-      var btns = document.querySelectorAll("button[data-theme]");
-      for (var k = 0; k < btns.length; k++) {
-        btns[k].addEventListener("click", function (e) {
-          e.preventDefault();
-          var theme = this.getAttribute("data-theme");
-          if (theme) setTheme(theme);
-        });
-      }
-    }
+    radio.syncActive(currentTheme);
 
     return {
-      setTheme: setTheme,
-      updateButtons: function () {
-        _updateButtons(currentTheme);
+      syncActive: function () {
+        radio.syncActive(currentTheme);
       },
-      bindEvents: bindEvents,
     };
   }
 
   // =====================================================================
   // Font Family Manager
   // =====================================================================
-  function _createFontManager(rendition, pref) {
-    var currentFont = pref.get("font", "");
+  function _createFontManager(rendition, store) {
+    var currentFont = store.get("font", "");
     var fontFaceCss = _buildFontFaceCss();
+    var CSS_ID = "font-override";
 
-    // 注入 font-face（hook 到每個 content）
+    var injector = _createCssInjector(rendition, CSS_ID, function (isActive) {
+      // font-face 永遠 inject（isActive 唔影響）
+      return null; // font-face 另外處理
+    });
+
+    // font-face 永遠注入
     rendition.hooks.content.register(function (contents) {
       if (fontFaceCss) {
         contents.addStylesheetCss(fontFaceCss, "custom-font-face");
       }
-      if (currentFont) {
-        contents.addStylesheetCss(
-          FONT_OVERRIDE_SELECTOR +
-            " { font-family: " +
-            currentFont +
-            " !important; }",
-          "font-override",
-        );
-      }
     });
 
-    function applyFont(family) {
+    function _fontCss(family) {
+      return family
+        ? FONT_OVERRIDE_SELECTOR +
+            " { font-family: " +
+            family +
+            " !important; }"
+        : "body {}";
+    }
+
+    function _applyToAll(family) {
+      var css = _fontCss(family);
       var list = rendition.getContents();
       for (var i = 0; i < list.length; i++) {
-        if (family) {
-          list[i].addStylesheetCss(
-            FONT_OVERRIDE_SELECTOR +
-              " { font-family: " +
-              family +
-              " !important; }",
-            "font-override",
-          );
-        } else {
-          // 清空 font-override 以還原預設字型
-          list[i].addStylesheetCss("", "font-override");
-        }
+        list[i].addStylesheetCss(css, CSS_ID);
       }
     }
 
+    rendition.hooks.content.register(function (contents) {
+      var css = _fontCss(currentFont);
+      if (css) {
+        contents.addStylesheetCss(css, CSS_ID);
+      }
+    });
+
     function setFont(family) {
       currentFont = family;
-      pref.set("font", family);
-      applyFont(family);
+      store.set("font", family);
+      _applyToAll(family);
     }
 
     function initSelect() {
       var sel = document.getElementById("font-select");
-      if (sel) {
-        sel.value = currentFont;
-      }
+      if (sel) sel.value = currentFont;
     }
 
     function bindEvents() {
@@ -208,7 +296,9 @@
         return currentFont;
       },
       setFont: setFont,
-      applyFont: applyFont,
+      applyAll: function () {
+        _applyToAll(currentFont);
+      },
       initSelect: initSelect,
       bindEvents: bindEvents,
     };
@@ -217,15 +307,13 @@
   // =====================================================================
   // Font Size Manager
   // =====================================================================
-  function _createFontSizeManager(rendition, pref) {
-    var currentSize = pref.getInt("fontSize", 100);
+  function _createFontSizeManager(rendition, store) {
+    var currentSize = store.getInt("fontSize", 100);
     rendition.themes.fontSize(currentSize + "%");
 
-    function updateLabel() {
-      var label = document.getElementById("font-size-label");
-      if (label) {
-        label.textContent = currentSize + "%";
-      }
+    function _updateLabel() {
+      var el = document.getElementById("font-size-label");
+      if (el) el.textContent = currentSize + "%";
     }
 
     function adjust(delta) {
@@ -234,185 +322,120 @@
       var newIdx = Math.max(0, Math.min(FONT_SIZES.length - 1, idx + delta));
       if (newIdx === idx) return;
       currentSize = FONT_SIZES[newIdx];
-      pref.set("fontSize", String(currentSize));
+      store.set("fontSize", String(currentSize));
       rendition.themes.fontSize(currentSize + "%");
-      updateLabel();
+      _updateLabel();
     }
 
     function bindEvents() {
-      var downBtn = document.getElementById("font-size-down");
-      var upBtn = document.getElementById("font-size-up");
-      if (downBtn) {
-        downBtn.addEventListener("click", function (e) {
+      var down = document.getElementById("font-size-down");
+      var up = document.getElementById("font-size-up");
+      if (down)
+        down.addEventListener("click", function (e) {
           e.preventDefault();
           adjust(-1);
         });
-      }
-      if (upBtn) {
-        upBtn.addEventListener("click", function (e) {
+      if (up)
+        up.addEventListener("click", function (e) {
           e.preventDefault();
           adjust(1);
         });
-      }
     }
 
-    return { updateLabel: updateLabel, adjust: adjust, bindEvents: bindEvents };
+    return { syncLabel: _updateLabel, bindEvents: bindEvents };
   }
 
   // =====================================================================
-  // Line Height Manager（改用 option chips）
+  // Line Height Manager
   // =====================================================================
-  function _createLineHeightManager(rendition, pref) {
-    var currentIndex = pref.getInt("lineHeight", 1);
+  function _createLineHeightManager(rendition, store) {
+    var currentIndex = store.getInt("lineHeight", 1);
     rendition.themes.override("line-height", LINE_HEIGHTS[currentIndex], true);
 
-    function updateChips() {
-      var chips = document.querySelectorAll(".line-height-chip");
-      for (var i = 0; i < chips.length; i++) {
-        var idx = parseInt(chips[i].getAttribute("data-index"), 10);
-        if (idx === currentIndex) {
-          chips[i].classList.add("active");
-        } else {
-          chips[i].classList.remove("active");
-        }
-      }
-    }
+    var chip = _bindChipGroup(".line-height-chip", function (idx) {
+      if (idx < 0 || idx >= LINE_HEIGHTS.length) return;
+      currentIndex = idx;
+      store.set("lineHeight", String(idx));
+      rendition.themes.override("line-height", LINE_HEIGHTS[idx], true);
+    });
 
-    function setIndex(index) {
-      if (index < 0 || index >= LINE_HEIGHTS.length) return;
-      currentIndex = index;
-      pref.set("lineHeight", String(currentIndex));
+    chip.syncActive(currentIndex);
+
+    return {
+      syncActive: function () {
+        chip.syncActive(currentIndex);
+      },
+    };
+  }
+
+  // =====================================================================
+  // Margin Manager
+  // =====================================================================
+  function _createMarginManager(rendition, store) {
+    var currentIndex = store.getInt("margin", 1);
+    var _apply = function (idx) {
       rendition.themes.override(
-        "line-height",
-        LINE_HEIGHTS[currentIndex],
+        "padding",
+        MARGINS[idx] + "px " + MARGINS[idx] * 2 + "px",
         true,
       );
-      updateChips();
-    }
+    };
+    _apply(currentIndex);
 
-    function bindEvents() {
-      var chips = document.querySelectorAll(".line-height-chip");
-      for (var i = 0; i < chips.length; i++) {
-        chips[i].addEventListener("click", function (e) {
-          e.preventDefault();
-          var idx = parseInt(this.getAttribute("data-index"), 10);
-          setIndex(idx);
-        });
-      }
-    }
+    var chip = _bindChipGroup(".margin-chip", function (idx) {
+      if (idx < 0 || idx >= MARGINS.length) return;
+      currentIndex = idx;
+      store.set("margin", String(idx));
+      _apply(idx);
+    });
+
+    chip.syncActive(currentIndex);
 
     return {
-      updateChips: updateChips,
-      setIndex: setIndex,
-      bindEvents: bindEvents,
+      syncActive: function () {
+        chip.syncActive(currentIndex);
+      },
     };
   }
 
   // =====================================================================
-  // Margin Manager（改用 option chips）
+  // Column Mode Manager（toggle → page reload → hook 注入）
   // =====================================================================
-  function _createMarginManager(rendition, pref) {
-    var currentIndex = pref.getInt("margin", 1);
-    rendition.themes.override("padding", MARGINS[currentIndex].padding, true);
-
-    function updateChips() {
-      var chips = document.querySelectorAll(".margin-chip");
-      for (var i = 0; i < chips.length; i++) {
-        var idx = parseInt(chips[i].getAttribute("data-index"), 10);
-        if (idx === currentIndex) {
-          chips[i].classList.add("active");
-        } else {
-          chips[i].classList.remove("active");
-        }
-      }
-    }
-
-    function setIndex(index) {
-      if (index < 0 || index >= MARGINS.length) return;
-      currentIndex = index;
-      pref.set("margin", String(currentIndex));
-      rendition.themes.override("padding", MARGINS[currentIndex].padding, true);
-      updateChips();
-    }
-
-    function bindEvents() {
-      var chips = document.querySelectorAll(".margin-chip");
-      for (var i = 0; i < chips.length; i++) {
-        chips[i].addEventListener("click", function (e) {
-          e.preventDefault();
-          var idx = parseInt(this.getAttribute("data-index"), 10);
-          setIndex(idx);
-        });
-      }
-    }
-
-    return {
-      updateChips: updateChips,
-      setIndex: setIndex,
-      bindEvents: bindEvents,
-    };
-  }
-
-  // =====================================================================
-  // Column Mode Manager（hook 版：render 時 check setting 先 inject CSS）
-  // =====================================================================
-  function _createColumnManager(rendition, pref) {
-    var isSingleColumn = pref.get("singleColumn", "true") !== "false";
-    // 單欄 ON 先 inject CSS 鎖死 1 欄
-    // 單欄 OFF → 唔 inject 任何嘢，由 contents.columns() 原生 CSS 控制多欄
-    var COLUMN_CSS = "body { column-count: 1 !important; }";
+  function _createColumnManager(rendition, store) {
+    var isSingleColumn = store.getBool("singleColumn", true);
     var CSS_ID = "single-column-override";
 
     rendition.hooks.content.register(function (contents) {
       if (isSingleColumn) {
-        contents.addStylesheetCss(COLUMN_CSS, CSS_ID);
+        contents.addStylesheetCss(
+          "body { column-count: 1 !important; }",
+          CSS_ID,
+        );
       }
-      // OFF mode：唔 inject，contents.columns() 嘅 inline CSS 自然生效
+      // OFF mode：唔 inject，contents.columns() 原生 CSS 控制多欄
     });
 
-    function updateToggle() {
-      var cb = document.getElementById("column-toggle");
-      if (cb) {
-        cb.checked = isSingleColumn;
-      }
-    }
-
-    function _reloadPage() {
-      // beforeunload handler 喺 hos.js 會自動 save CFI → reload 後 resume
+    var toggle = _bindToggle("column-toggle", function (checked) {
+      store.set("singleColumn", checked ? "true" : "false");
+      // beforeunload handler 喺 hos.js 自動 save CFI → reload 後 resume
       window.location.reload();
-    }
+    });
 
-    function toggle() {
-      isSingleColumn = !isSingleColumn;
-      pref.set("singleColumn", isSingleColumn ? "true" : "false");
-      _reloadPage();
-    }
-
-    function bindEvents() {
-      var cb = document.getElementById("column-toggle");
-      if (cb) {
-        updateToggle();
-        cb.addEventListener("change", function () {
-          isSingleColumn = cb.checked;
-          pref.set("singleColumn", isSingleColumn ? "true" : "false");
-          _reloadPage();
-        });
-      }
-    }
+    toggle.sync(isSingleColumn);
 
     return {
-      updateToggle: updateToggle,
-      toggle: toggle,
-      bindEvents: bindEvents,
+      syncToggle: function () {
+        toggle.sync(isSingleColumn);
+      },
     };
   }
 
   // =====================================================================
-  // Writing Mode Manager（改用 toggle switch）
+  // Writing Mode Manager
   // =====================================================================
-  function _createWritingModeManager(rendition, pref) {
-    var isVertical = pref.get("writingMode", "horizontal") === "vertical";
-
+  function _createWritingModeManager(rendition, store) {
+    var isVertical = store.get("writingMode", "horizontal") === "vertical";
+    var CSS_ID = "writing-mode-override";
     var WRITING_MODE_CSS =
       "body { writing-mode: vertical-rl !important; " +
       "-webkit-writing-mode: vertical-rl !important; " +
@@ -421,57 +444,24 @@
       "max-height: 100% !important; " +
       "overflow-x: auto !important; }";
 
-    function apply() {
-      var list = rendition.getContents();
-      for (var i = 0; i < list.length; i++) {
-        if (isVertical) {
-          list[i].addStylesheetCss(WRITING_MODE_CSS, "writing-mode-override");
-        } else {
-          list[i].addStylesheetCss("", "writing-mode-override");
-        }
-      }
-    }
+    var injector = _createCssInjector(rendition, CSS_ID, function (active) {
+      return active ? WRITING_MODE_CSS : "body {}";
+    });
+    injector.updateActive(isVertical);
 
-    // 注入到新 content
-    rendition.hooks.content.register(function (contents) {
-      if (isVertical) {
-        contents.addStylesheetCss(WRITING_MODE_CSS, "writing-mode-override");
-      }
+    var toggle = _bindToggle("writing-mode-toggle", function (checked) {
+      var vert = checked;
+      store.set("writingMode", vert ? "vertical" : "horizontal");
+      injector.updateActive(vert);
+      rendition.resize();
     });
 
-    function updateToggle() {
-      var cb = document.getElementById("writing-mode-toggle");
-      if (cb) {
-        cb.checked = isVertical;
-      }
-    }
-
-    function toggle() {
-      isVertical = !isVertical;
-      pref.set("writingMode", isVertical ? "vertical" : "horizontal");
-      apply();
-      updateToggle();
-      rendition.resize();
-    }
-
-    function bindEvents() {
-      var cb = document.getElementById("writing-mode-toggle");
-      if (cb) {
-        updateToggle();
-        cb.addEventListener("change", function () {
-          isVertical = cb.checked;
-          pref.set("writingMode", isVertical ? "vertical" : "horizontal");
-          apply();
-          rendition.resize();
-        });
-      }
-    }
+    toggle.sync(isVertical);
 
     return {
-      apply: apply,
-      updateToggle: updateToggle,
-      toggle: toggle,
-      bindEvents: bindEvents,
+      syncToggle: function () {
+        toggle.sync(isVertical);
+      },
     };
   }
 
@@ -484,44 +474,34 @@
     var triggerBtn = document.getElementById("bottom-settings");
 
     function open() {
-      if (overlay) {
-        overlay.classList.add("show");
-      }
+      if (overlay) overlay.classList.add("show");
     }
-
     function close() {
-      if (overlay) {
-        overlay.classList.remove("show");
-      }
+      if (overlay) overlay.classList.remove("show");
     }
 
     function bindEvents() {
-      if (closeBtn) {
+      if (closeBtn)
         closeBtn.addEventListener("click", function (e) {
           e.preventDefault();
           close();
         });
-      }
-      if (overlay) {
-        overlay.addEventListener("click", function (e) {
-          if (e.target === overlay) {
-            close();
-          }
-        });
-      }
-      if (triggerBtn) {
+      if (triggerBtn)
         triggerBtn.addEventListener("click", function (e) {
           e.preventDefault();
           open();
         });
-      }
+      if (overlay)
+        overlay.addEventListener("click", function (e) {
+          if (e.target === overlay) close();
+        });
     }
 
     return { open: open, close: close, bindEvents: bindEvents };
   }
 
   // =====================================================================
-  // TOC + Bottom Bar Controller
+  // Bottom Bar Controller（TOC toggle / Prev / Next / Page info）
   // =====================================================================
   function _createBottomBarController(rendition, book) {
     var tocEl = document.getElementById("toc");
@@ -529,67 +509,42 @@
     var prevBtn = document.getElementById("bottom-prev");
     var nextBtn = document.getElementById("bottom-next");
     var pageInfo = document.getElementById("page-info");
-    var viewer = document.getElementById("viewer");
-    var bottomBar = document.getElementById("bottom-bar");
-
-    function _isRtl() {
-      return (
-        book &&
-        book.package &&
-        book.package.metadata &&
-        book.package.metadata.direction === "rtl"
-      );
-    }
+    var H = window.hosReader;
 
     function updatePageInfo() {
       if (!pageInfo || !rendition) return;
       try {
         var loc = rendition.currentLocation();
-        if (loc && loc.start) {
-          var pct = loc.start.percentage || 0;
-          pageInfo.textContent = Math.round(pct * 100) + "%";
-        }
+        pageInfo.textContent =
+          loc && loc.start
+            ? Math.round((loc.start.percentage || 0) * 100) + "%"
+            : "—";
       } catch (_e) {
         pageInfo.textContent = "—";
       }
     }
 
     function bindEvents() {
-      // TOC toggle
       if (tocBtn && tocEl) {
         tocBtn.addEventListener("click", function (e) {
           e.preventDefault();
-          if (tocEl.classList.contains("hidden")) {
-            tocEl.classList.remove("hidden");
-          } else {
-            tocEl.classList.add("hidden");
-          }
+          tocEl.classList.toggle("hidden");
         });
       }
-
-      // Prev / Next
-      if (prevBtn) {
+      if (prevBtn)
         prevBtn.addEventListener("click", function (e) {
           e.preventDefault();
-          _isRtl() ? rendition.next() : rendition.prev();
+          H._isRtl() ? rendition.next() : rendition.prev();
         });
-      }
-      if (nextBtn) {
+      if (nextBtn)
         nextBtn.addEventListener("click", function (e) {
           e.preventDefault();
-          _isRtl() ? rendition.prev() : rendition.next();
+          H._isRtl() ? rendition.prev() : rendition.next();
         });
-      }
-
-      // 監聽 relocate 更新頁碼
-      rendition.on("relocated", function () {
-        updatePageInfo();
-      });
+      rendition.on("relocated", updatePageInfo);
     }
 
-    // 初始更新
     updatePageInfo();
-
     return { updatePageInfo: updatePageInfo, bindEvents: bindEvents };
   }
 
@@ -603,54 +558,36 @@
     if (!H || !H.book) return;
     var rendition = H.rendition;
     var book = H.book;
-    var url = H.url || "./ex.epub";
-    var PREF_PREFIX = "epub-pref-" + url + "-";
+    var store = _createStore(H._makeStorageKey("pref"));
 
-    var pref = _createPreferencesStore(PREF_PREFIX);
-
-    // --- Settings Popup ---
-    var popup = _createSettingsPopup();
-    popup.bindEvents();
-
-    // --- Bottom Bar ---
-    var bottomBar = _createBottomBarController(rendition, book);
-    bottomBar.bindEvents();
+    // --- Popup + Bottom Bar ---
+    _createSettingsPopup().bindEvents();
+    _createBottomBarController(rendition, book).bindEvents();
 
     // --- Theme ---
-    var themeManager = _createThemeManager(rendition, pref);
-    themeManager.updateButtons();
-    themeManager.bindEvents();
+    _createThemeManager(rendition, store);
 
     // --- Font Family ---
-    var fontManager = _createFontManager(rendition, pref);
-    fontManager.initSelect();
-    fontManager.applyFont(fontManager.getCurrentFont());
-    fontManager.bindEvents();
+    var font = _createFontManager(rendition, store);
+    font.initSelect();
+    font.applyAll();
+    font.bindEvents();
 
     // --- Font Size ---
-    var fontSizeManager = _createFontSizeManager(rendition, pref);
-    fontSizeManager.updateLabel();
-    fontSizeManager.bindEvents();
+    var fontSize = _createFontSizeManager(rendition, store);
+    fontSize.syncLabel();
+    fontSize.bindEvents();
 
     // --- Line Height ---
-    var lineHeightManager = _createLineHeightManager(rendition, pref);
-    lineHeightManager.updateChips();
-    lineHeightManager.bindEvents();
+    _createLineHeightManager(rendition, store);
 
     // --- Margin ---
-    var marginManager = _createMarginManager(rendition, pref);
-    marginManager.updateChips();
-    marginManager.bindEvents();
+    _createMarginManager(rendition, store);
 
     // --- Column Mode ---
-    var columnManager = _createColumnManager(rendition, pref);
-    columnManager.updateToggle();
-    columnManager.bindEvents();
+    _createColumnManager(rendition, store);
 
-    // --- Writing Mode (直排/橫排) ---
-    var writingModeManager = _createWritingModeManager(rendition, pref);
-    writingModeManager.apply();
-    writingModeManager.updateToggle();
-    writingModeManager.bindEvents();
+    // --- Writing Mode ---
+    _createWritingModeManager(rendition, store);
   };
 })();

@@ -6,12 +6,12 @@
   // 可用動作定義
   // =====================================================================
   var ACTIONS = {
-    prev:    { id: "prev",    label: "上一頁",     icon: "◀" },
-    next:    { id: "next",    label: "下一頁",     icon: "▶" },
-    toc:     { id: "toc",     label: "目錄",        icon: "📑" },
-    settings:{ id: "settings",label: "功能列",     icon: "⚙️" },
-    gridCfg: { id: "gridCfg", label: "網格設定",   icon: "⊞" },
-    none:    { id: "none",    label: "無（穿透）", icon: "—" },
+    prev: { id: "prev", label: "上一頁", icon: "◀" },
+    next: { id: "next", label: "下一頁", icon: "▶" },
+    toc: { id: "toc", label: "目錄", icon: "📑" },
+    settings: { id: "settings", label: "功能列", icon: "⚙️" },
+    gridCfg: { id: "gridCfg", label: "網格設定", icon: "⊞" },
+    none: { id: "none", label: "無（穿透）", icon: "—" },
   };
 
   // Highlight CSS class 列表（同 hos-highlights.js 同步）
@@ -19,9 +19,15 @@
 
   // 預設網格配置（3x3 = 9 格，row-major）
   var DEFAULT_GRID = [
-    "prev", "settings", "next",
-    "prev", "none",     "next",
-    "prev", "gridCfg",  "next",
+    "prev",
+    "settings",
+    "next",
+    "prev",
+    "none",
+    "next",
+    "prev",
+    "gridCfg",
+    "next",
   ];
 
   // =====================================================================
@@ -35,14 +41,18 @@
           var arr = JSON.parse(raw);
           if (arr.length === 9) return arr;
         }
-      } catch (_e) { /* ignore */ }
+      } catch (_e) {
+        /* ignore */
+      }
       return DEFAULT_GRID.slice();
     }
 
     function save(config) {
       try {
         localStorage.setItem(storageKey, JSON.stringify(config));
-      } catch (_e) { /* ignore */ }
+      } catch (_e) {
+        /* ignore */
+      }
     }
 
     return { load: load, save: save };
@@ -212,9 +222,7 @@
     var H = window.hosReader;
     if (!H || !H.rendition) return;
     var rendition = H.rendition;
-    var book = H.book;
-    var url = H.url || "./ex.epub";
-    var STORAGE_KEY = "epub-grid-" + url;
+    var STORAGE_KEY = H._makeStorageKey("grid");
 
     var store = _createGridStore(STORAGE_KEY);
     var config = store.load();
@@ -228,46 +236,21 @@
     var configPanel = _createConfigPanel(_onConfigSave);
 
     // ---- 動作執行 ----
-    function _isRtl() {
-      return book && book.package && book.package.metadata &&
-        book.package.metadata.direction === "rtl";
-    }
-
-    function _toggleToc() {
-      var toc = document.getElementById("toc");
-      if (toc) {
-        if (toc.classList.contains("hidden")) {
-          toc.classList.remove("hidden");
-        } else {
-          toc.classList.add("hidden");
-        }
-      }
-    }
-
-    function _toggleSettings() {
-      var overlay = document.getElementById("settings-overlay");
-      if (overlay) {
-        if (overlay.classList.contains("show")) {
-          overlay.classList.remove("show");
-        } else {
-          overlay.classList.add("show");
-        }
-      }
-    }
-
     function _executeAction(actionId) {
       switch (actionId) {
         case "prev":
-          _isRtl() ? rendition.next() : rendition.prev();
+          H._isRtl() ? rendition.next() : rendition.prev();
           break;
         case "next":
-          _isRtl() ? rendition.prev() : rendition.next();
+          H._isRtl() ? rendition.prev() : rendition.next();
           break;
         case "toc":
-          _toggleToc();
+          var toc = document.getElementById("toc");
+          if (toc) toc.classList.toggle("hidden");
           break;
         case "settings":
-          _toggleSettings();
+          var ov = document.getElementById("settings-overlay");
+          if (ov) ov.classList.toggle("show");
           break;
         case "gridCfg":
           configPanel.show(config);
@@ -282,43 +265,55 @@
       var doc = contents.document;
       if (!doc) return;
 
-      doc.addEventListener("click", function (e) {
-        // 唔干擾 highlight 點擊（click on highlight → show note）
-        if (_isHighlightTarget(e.target)) return;
+      doc.addEventListener(
+        "click",
+        function (e) {
+          // 唔干擾 highlight 點擊（click on highlight → show note）
+          if (_isHighlightTarget(e.target)) return;
 
-        // 如果有文字選取 → skip grid action（畀 highlight popup 處理）
-        var win = contents.window || (contents.document && contents.document.defaultView);
-        var sel = win ? win.getSelection() : null;
-        if (sel && !sel.isCollapsed && sel.toString().trim()) return;
+          // 如果有文字選取 → skip grid action（畀 highlight popup 處理）
+          var win =
+            contents.window ||
+            (contents.document && contents.document.defaultView);
+          var sel = win ? win.getSelection() : null;
+          if (sel && !sel.isCollapsed && sel.toString().trim()) return;
 
-        // 計算 iframe 內 click 嘅絕對坐標
-        var iframe = win ? win.frameElement : null;
-        var iframeRect = iframe ? iframe.getBoundingClientRect() : { left: 0, top: 0 };
-        var absX = iframeRect.left + e.clientX;
-        var absY = iframeRect.top + e.clientY;
+          // 計算 iframe 內 click 嘅絕對坐標
+          var iframe = win ? win.frameElement : null;
+          var iframeRect = iframe
+            ? iframe.getBoundingClientRect()
+            : { left: 0, top: 0 };
+          var absX = iframeRect.left + e.clientX;
+          var absY = iframeRect.top + e.clientY;
 
-        var index = _getCellIndex(absX, absY);
-        var actionId = config[index];
+          var index = _getCellIndex(absX, absY);
+          var actionId = config[index];
 
-        if (actionId && actionId !== "none") {
-          e.stopPropagation();
-          e.preventDefault();
-          _executeAction(actionId);
-        }
-        // actionId === "none" → event passes through（text selection, links 等）
-      }, true);
+          if (actionId && actionId !== "none") {
+            e.stopPropagation();
+            e.preventDefault();
+            _executeAction(actionId);
+          }
+          // actionId === "none" → event passes through（text selection, links 等）
+        },
+        true,
+      );
     });
 
     // ---- 暴露 API ----
     window.hosReader.grid = {
-      showConfig: function () { configPanel.show(config); },
+      showConfig: function () {
+        configPanel.show(config);
+      },
       setCell: function (index, actionId) {
         if (index >= 0 && index < 9 && ACTIONS[actionId]) {
           config[index] = actionId;
           store.save(config);
         }
       },
-      getConfig: function () { return config.slice(); },
+      getConfig: function () {
+        return config.slice();
+      },
     };
   };
 })();

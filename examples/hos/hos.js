@@ -77,6 +77,26 @@
   H.rendition = rendition;
   H.url = epubUrl;
 
+  // ---- Shared helpers（供其他 module 使用）----
+  H._isRtl = function () {
+    return (
+      book &&
+      book.package &&
+      book.package.metadata &&
+      book.package.metadata.direction === "rtl"
+    );
+  };
+
+  H._makeStorageKey = function (module) {
+    return "epub-" + module + "-" + epubUrl;
+  };
+
+  H._closeOnBackdrop = function (overlay, onClose) {
+    overlay.addEventListener("click", function (e) {
+      if (e.target === overlay) onClose();
+    });
+  };
+
   // =====================================================================
   // Display（加載完畢後顯示）
   // =====================================================================
@@ -94,23 +114,16 @@
     });
 
   // =====================================================================
-  // Wire up modules（book ready 後初始化 settings / highlights / grid / scst）
+  // Wire up modules（book ready 後初始化所有模組）
   // =====================================================================
+  var MODULES = ["_initSettings", "_initHighlights", "_initGrid", "_initSCST"];
   book.ready.then(function () {
-    if (window.hosReader._initSettings) {
-      window.hosReader._initSettings();
-    }
-    if (window.hosReader._initHighlights) {
-      window.hosReader._initHighlights();
-    }
-    if (window.hosReader._initGrid) {
-      window.hosReader._initGrid();
-    }
-    if (window.hosReader._initSCST) {
-      window.hosReader._initSCST();
+    for (var i = 0; i < MODULES.length; i++) {
+      var fn = window.hosReader[MODULES[i]];
+      if (typeof fn === "function") fn();
     }
 
-    // ---- Settings bar 內嘅 grid config button (long-press → 網格設定) ----
+    // Settings bar 內嘅 grid config button
     var gridCfgBtn = document.getElementById("grid-config");
     if (gridCfgBtn && window.hosReader.grid) {
       gridCfgBtn.addEventListener("click", function (e) {

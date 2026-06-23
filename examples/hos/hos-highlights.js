@@ -95,7 +95,8 @@
 
     // 顏色按鈕列
     var colorRow = document.createElement("div");
-    colorRow.style.cssText = "display:flex;gap:4px;margin-bottom:6px;align-items:center;";
+    colorRow.style.cssText =
+      "display:flex;gap:4px;margin-bottom:6px;align-items:center;";
     for (var c = 0; c < HIGHLIGHT_COLORS.length; c++) {
       var colorBtn = document.createElement("button");
       colorBtn.textContent = HIGHLIGHT_COLORS[c].label;
@@ -104,8 +105,12 @@
       colorBtn.style.cssText =
         "border:none;background:none;cursor:pointer;font-size:18px;padding:2px 4px;" +
         "border-radius:4px;transition:background .15s;";
-      colorBtn.addEventListener("mouseenter", function () { this.style.background = "#f0f0f0"; });
-      colorBtn.addEventListener("mouseleave", function () { this.style.background = "none"; });
+      colorBtn.addEventListener("mouseenter", function () {
+        this.style.background = "#f0f0f0";
+      });
+      colorBtn.addEventListener("mouseleave", function () {
+        this.style.background = "none";
+      });
       colorRow.appendChild(colorBtn);
     }
 
@@ -123,15 +128,23 @@
     noteBtn.style.cssText =
       "border:1px solid #ddd;background:#fafafa;cursor:pointer;padding:4px 10px;" +
       "border-radius:4px;font-size:13px;color:#555;transition:background .15s;";
-    noteBtn.addEventListener("mouseenter", function () { this.style.background = "#e3f2fd"; });
-    noteBtn.addEventListener("mouseleave", function () { this.style.background = "#fafafa"; });
+    noteBtn.addEventListener("mouseenter", function () {
+      this.style.background = "#e3f2fd";
+    });
+    noteBtn.addEventListener("mouseleave", function () {
+      this.style.background = "#fafafa";
+    });
 
     var undoBtn = document.createElement("button");
     undoBtn.textContent = "↩️ 移除";
     undoBtn.setAttribute("data-action", "remove");
     undoBtn.style.cssText = noteBtn.style.cssText;
-    undoBtn.addEventListener("mouseenter", function () { this.style.background = "#ffebee"; });
-    undoBtn.addEventListener("mouseleave", function () { this.style.background = "#fafafa"; });
+    undoBtn.addEventListener("mouseenter", function () {
+      this.style.background = "#ffebee";
+    });
+    undoBtn.addEventListener("mouseleave", function () {
+      this.style.background = "#fafafa";
+    });
 
     actionRow.appendChild(noteBtn);
     actionRow.appendChild(undoBtn);
@@ -182,7 +195,9 @@
     cancelBtn.textContent = "取消";
     cancelBtn.style.cssText =
       "padding:8px 16px;border:1px solid #ddd;border-radius:6px;background:#fff;cursor:pointer;font-size:14px;";
-    cancelBtn.addEventListener("click", function () { overlay.style.display = "none"; });
+    cancelBtn.addEventListener("click", function () {
+      overlay.style.display = "none";
+    });
 
     var saveBtn = document.createElement("button");
     saveBtn.textContent = "儲存";
@@ -236,14 +251,16 @@
     for (var i = 0; i < HIGHLIGHT_COLORS.length; i++) {
       var c = HIGHLIGHT_COLORS[i];
       css +=
-        "." + c.cls + " { background-color: " + c.bg + " !important; " +
+        "." +
+        c.cls +
+        " { background-color: " +
+        c.bg +
+        " !important; " +
         "border-radius: 2px; padding: 0 1px; cursor: pointer; transition: background-color .2s; }\n";
-      css +=
-        "." + c.cls + ":hover { filter: brightness(0.92); }\n";
+      css += "." + c.cls + ":hover { filter: brightness(0.92); }\n";
     }
     // 附有筆記嘅 highlight 加底線
-    css +=
-      ".hl-has-note { border-bottom: 2px dotted #e91e63 !important; }\n";
+    css += ".hl-has-note { border-bottom: 2px dotted #e91e63 !important; }\n";
     return css;
   }
 
@@ -256,8 +273,7 @@
     var H = window.hosReader;
     if (!H || !H.rendition) return;
     var rendition = H.rendition;
-    var url = H.url || "./ex.epub";
-    var STORAGE_KEY = "epub-hl-" + url;
+    var STORAGE_KEY = H._makeStorageKey("hl");
 
     var store = _createHighlightStore(STORAGE_KEY);
     var popup = _createPopup();
@@ -304,7 +320,9 @@
 
       // 取得 iframe 相對於主 window 嘅偏移
       var iframe = iframeWin.frameElement;
-      var iframeRect = iframe ? iframe.getBoundingClientRect() : { left: 0, top: 0 };
+      var iframeRect = iframe
+        ? iframe.getBoundingClientRect()
+        : { left: 0, top: 0 };
 
       var left = iframeRect.left + rect.left + rect.width / 2;
       var top = iframeRect.top + rect.top - 50;
@@ -312,7 +330,8 @@
       // 屏幕邊界檢查
       var popupW = 260; // 估計 popup 寬度
       if (left - popupW / 2 < 10) left = 10 + popupW / 2;
-      if (left + popupW / 2 > window.innerWidth - 10) left = window.innerWidth - 10 - popupW / 2;
+      if (left + popupW / 2 > window.innerWidth - 10)
+        left = window.innerWidth - 10 - popupW / 2;
       if (top < 10) top = iframeRect.top + rect.bottom + 10; // 如果上面唔夠位，放下面
 
       popup.style.left = left + "px";
@@ -328,7 +347,12 @@
       colorBtns[i].addEventListener("click", function (e) {
         e.stopPropagation();
         var colorCls = this.getAttribute("data-hl-color");
-        _applyHighlight(currentSelectionCfi, currentSelectionText, colorCls, "");
+        _applyHighlight(
+          currentSelectionCfi,
+          currentSelectionText,
+          colorCls,
+          "",
+        );
         popup.style.display = "none";
       });
     }
@@ -340,7 +364,12 @@
         e.stopPropagation();
         popup.style.display = "none";
         noteEditor.show(currentSelectionText, function (noteText) {
-          _applyHighlight(currentSelectionCfi, currentSelectionText, "hl-yellow", noteText);
+          _applyHighlight(
+            currentSelectionCfi,
+            currentSelectionText,
+            "hl-yellow",
+            noteText,
+          );
         });
       });
     }
@@ -416,7 +445,8 @@
     rendition.on("selected", function (cfiRange, contents) {
       if (!cfiRange) return;
 
-      var win = contents.window || (contents.document && contents.document.defaultView);
+      var win =
+        contents.window || (contents.document && contents.document.defaultView);
       if (!win) return;
 
       var sel = win.getSelection();
@@ -442,7 +472,9 @@
 
       doc.addEventListener("mouseup", function () {
         setTimeout(function () {
-          var win = contents.window || (contents.document && contents.document.defaultView);
+          var win =
+            contents.window ||
+            (contents.document && contents.document.defaultView);
           var sel = win ? win.getSelection() : null;
           if (!sel || sel.isCollapsed) {
             popup.style.display = "none";
@@ -452,7 +484,9 @@
 
       doc.addEventListener("touchend", function () {
         setTimeout(function () {
-          var win = contents.window || (contents.document && contents.document.defaultView);
+          var win =
+            contents.window ||
+            (contents.document && contents.document.defaultView);
           var sel = win ? win.getSelection() : null;
           if (!sel || sel.isCollapsed) {
             popup.style.display = "none";
@@ -491,7 +525,12 @@
           try {
             rend.annotations.highlight(
               item.cfi,
-              { text: item.text, note: item.note, color: item.color, timestamp: item.timestamp },
+              {
+                text: item.text,
+                note: item.note,
+                color: item.color,
+                timestamp: item.timestamp,
+              },
               null,
               className,
               styles,
@@ -513,7 +552,10 @@
         // 檢查係咪 highlight element
         var isHl = false;
         for (var j = 0; j < HIGHLIGHT_COLORS.length; j++) {
-          if (target.classList && target.classList.contains(HIGHLIGHT_COLORS[j].cls)) {
+          if (
+            target.classList &&
+            target.classList.contains(HIGHLIGHT_COLORS[j].cls)
+          ) {
             isHl = true;
             break;
           }
@@ -531,7 +573,11 @@
 
         var item = store.findByCfi(cfi);
         if (item && item.note) {
-          _showNoteTooltip(item, e, contents.window || contents.document.defaultView);
+          _showNoteTooltip(
+            item,
+            e,
+            contents.window || contents.document.defaultView,
+          );
         }
       });
     });
@@ -540,7 +586,8 @@
     var _noteTooltip = null;
     function _showNoteTooltip(item, event, win) {
       if (_noteTooltip) {
-        _noteTooltip.parentNode && _noteTooltip.parentNode.removeChild(_noteTooltip);
+        _noteTooltip.parentNode &&
+          _noteTooltip.parentNode.removeChild(_noteTooltip);
       }
 
       var tip = document.createElement("div");
@@ -552,10 +599,12 @@
 
       var rect = event.target.getBoundingClientRect();
       var iframe = win.frameElement;
-      var iframeRect = iframe ? iframe.getBoundingClientRect() : { left: 0, top: 0 };
+      var iframeRect = iframe
+        ? iframe.getBoundingClientRect()
+        : { left: 0, top: 0 };
 
-      tip.style.left = (iframeRect.left + rect.left) + "px";
-      tip.style.top = (iframeRect.top + rect.bottom + 6) + "px";
+      tip.style.left = iframeRect.left + rect.left + "px";
+      tip.style.top = iframeRect.top + rect.bottom + 6 + "px";
 
       document.body.appendChild(tip);
       _noteTooltip = tip;
