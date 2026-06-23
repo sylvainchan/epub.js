@@ -68,6 +68,26 @@ body {
   margin: 10px auto;
 }
 
+#column-toggle {
+  display: block;
+  margin: 4px auto;
+  font-size: 14px;
+  padding: 4px 14px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+#column-toggle:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+#column-toggle:active {
+  background: rgba(0, 0, 0, 0.1);
+}
+
 @media (min-width: 1000px) {
   #viewer.spreads:after {
     position: absolute;
@@ -359,5 +379,21 @@ svg {
   /* 隱藏 spread 分隔線 */
   #viewer.spreads:after {
     display: none !important;
+  }
+
+  #column-toggle {
+    position: fixed;
+    top: env(safe-area-inset-top, 8px);
+    right: 8px;
+    z-index: 20;
+    font-size: 13px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    cursor: pointer;
+    white-space: nowrap;
   }
 }

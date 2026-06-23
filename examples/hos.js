@@ -103,6 +103,64 @@
 		flow: "paginated",
 	});
 
+	// ---- 單欄 / 多欄切換 ----
+	var COLUMN_STORAGE_KEY = "epub-single-col-" + (url || "./ex.epub");
+	// 預設單欄，除非 localStorage 記錄咗 false
+	var _isSingleColumn = localStorage.getItem(COLUMN_STORAGE_KEY) !== "false";
+
+	var _originalFormat = null;
+
+	function _applySingleColumn(layout) {
+		if (!layout) {
+			layout = rendition.manager && rendition.manager.layout;
+		}
+		if (!layout) return;
+
+		if (!_originalFormat) {
+			_originalFormat = layout.format.bind(layout);
+		}
+
+		if (_isSingleColumn) {
+			// 強制一頁一欄：columnWidth 設到極大 → CSS 只出一欄
+			layout.format = function (contents, section, axis) {
+				if (this._flow === "paginated") {
+					return contents.columns(this.width, this.height, 99999, 0, this.settings.direction);
+				}
+				return _originalFormat(contents, section, axis);
+			};
+		} else {
+			// 還原原版 format → 多欄
+			layout.format = _originalFormat;
+		}
+	}
+
+	function _updateColumnToggleLabel() {
+		var btn = document.getElementById("column-toggle");
+		if (btn) {
+			btn.textContent = _isSingleColumn ? "📖 單欄" : "📚 多欄";
+		}
+	}
+
+	function _toggleColumnMode() {
+		_isSingleColumn = !_isSingleColumn;
+		localStorage.setItem(COLUMN_STORAGE_KEY, _isSingleColumn ? "true" : "false");
+		_applySingleColumn();
+		_updateColumnToggleLabel();
+
+		// 記錄當前位置，重新 display 令新嘅 columns 設定生效
+		var loc = rendition.currentLocation();
+		if (loc && loc.start && loc.start.cfi) {
+			rendition.display(loc.start.cfi);
+		} else {
+			rendition.resize();
+		}
+	}
+
+	rendition.on("attached", function () {
+		_applySingleColumn();
+	});
+	// ---- End 單欄 / 多欄切換 ----
+
 	// 等 locations generate 完先 display，確保 saved CFI resume 準確
 	book.ready.then(function () {
 		return book.locations.generate(1000);
@@ -167,6 +225,17 @@
 
 		// 初始檢查箭嘴顯示狀態
 		_updateArrowVisibility();
+		// ---- End ----
+
+		// ---- 單欄/多欄切換掣 ----
+		var columnToggle = document.getElementById("column-toggle");
+		if (columnToggle) {
+			_updateColumnToggleLabel();
+			columnToggle.addEventListener("click", function (e) {
+				e.preventDefault();
+				_toggleColumnMode();
+			});
+		}
 		// ---- End ----
 	});
 
